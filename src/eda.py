@@ -434,7 +434,7 @@ class ExploratoryDataAnalyzer:
         return bivariate_figs
     
     def _perform_statistical_tests(self) -> Dict[str, pd.DataFrame]:
-        """Perform statistical tests for feature significance."""
+        """Perform statistical tests for feature significance with type safety."""
         module_logger.info("Performing statistical tests...")
         
         test_results = {}
@@ -444,9 +444,19 @@ class ExploratoryDataAnalyzer:
             numerical_tests = []
             
             for col in self.numerical_features:
+                # ensure data is numeric
+                if not pd.api.types.is_numeric_dtype(self.train_data[col]):
+                    module_logger.warning(f"Skipping non-numeric feature: {col}")
+                    continue
+
                 # Separate by target class
                 class_0 = self.train_data[self.train_data[TARGET_COLUMN] == 0][col].dropna()
                 class_1 = self.train_data[self.train_data[TARGET_COLUMN] == 1][col].dropna()
+    
+                # Skip if not enough data
+                if len(class_0) < 3 or len(class_1) < 3:
+                    module_logger.warning(f"Insufficient data for '{col}' statistical test")
+                    continue
                 
                 # Normality test (Shapiro-Wilk)
                 _, p_normal_0 = stats.shapiro(class_0) if len(class_0) > 3 else (None, None)
@@ -475,8 +485,13 @@ class ExploratoryDataAnalyzer:
         # Tests for categorical features
         if self.categorical_features:
             categorical_tests = []
-            
+
             for col in self.categorical_features:
+                # ensure reasonable cardinality
+                if self.train_data[col].nunique() > 20:
+                    module_logger.warning(f"Skipping high cardinality feature '{col}' in categorical tests")
+                    continue
+
                 # Chi-square test
                 crosstab = pd.crosstab(self.train_data[col], 
                                       self.train_data[TARGET_COLUMN])
@@ -496,17 +511,23 @@ class ExploratoryDataAnalyzer:
         return test_results
     
     def _analyze_outliers(self) -> Dict[str, Any]:
-        """Analyse outliers in numerical features."""
+        """Analyse outliers in numerical features. Skips identifiers."""
         module_logger.info("Analysing outliers...")
         
         outlier_results = {}
+
+        # Filter out identifier columns
+        valid_numerical = [col for col in self.numerical_features 
+                            if col not in ['id'] and 
+                            col in self.train_data.columns]
         
-        if self.numerical_features:
+        if valid_numerical:
             # IQR method
             outlier_counts = {}
             outlier_indices = {}
+            X_numerical = self.train_data[valid_numerical]
             
-            for col in self.numerical_features:
+            for col in valid_numerical:
                 Q1 = self.train_data[col].quantile(0.25)
                 Q3 = self.train_data[col].quantile(0.75)
                 IQR = Q3 - Q1
@@ -535,7 +556,7 @@ class ExploratoryDataAnalyzer:
             fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
             axes = axes.flatten() if n_rows > 1 else [axes]
             
-            for idx, col in enumerate(self.numerical_features):
+            for idx, col in enumerate(valid_numerical):
                 ax = axes[idx]
                 self.train_data.boxplot(column=col, ax=ax)
                 ax.set_title(f'{col} - Outliers: {outlier_counts[col]}')

@@ -160,17 +160,24 @@ class DataPreprocessor:
         return quality_report
     
     def _identify_feature_types(self) -> None:
-        """Identify categorical and numerical features based on data characteristics."""
+        """Identify categorical and numerical features with identifier handling."""
+        identifier_features = ['id']  # Explicit identifier columns
         categorical_features = []
         numerical_features = []
         
         for col in self.feature_names:
-            # Check if column is numeric
+            # Skip identifier columns
+            if col in identifier_features:
+                continue
+                
+            # Check actual data type
             if pd.api.types.is_numeric_dtype(self.train_data[col]):
                 # Check if it might be categorical (low cardinality)
-                unique_ratio = self.train_data[col].nunique() / len(self.train_data)
-                if self.train_data[col].nunique() <= 10 or unique_ratio < 0.05:
-                    # Likely categorical
+                unique_vals = self.train_data[col].nunique()
+                unique_ratio = unique_vals / len(self.train_data)
+                
+                # Treat as categorical if low cardinality
+                if unique_vals <= 10 or (unique_ratio < 0.05 and unique_vals < 50):
                     categorical_features.append(col)
                 else:
                     numerical_features.append(col)
@@ -182,12 +189,12 @@ class DataPreprocessor:
         self.numerical_features = numerical_features
         
         module_logger.info(f"Categorical features ({len(categorical_features)}): {categorical_features}")
-        module_logger.info(f"Numerical features ({len(numerical_features)}): {numerical_features}")
+        module_logger.info(f"Numerical features ({len(numerical_features)}): {numerical_features}")    
     
     def handle_missing_values(self, strategy: str = 'median', 
                             threshold: float = 0.5) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Handle missing values in the datasets.
+        Handle missing values in the datasets with proper type conversion.
         
         Args:
             strategy: Imputation strategy ('mean', 'median', 'mode', 'knn', 'drop')
@@ -252,16 +259,32 @@ class DataPreprocessor:
                     transformers.append(('cat', cat_imputer, self.categorical_features))
                 
                 if transformers:
-                    preprocessor = ColumnTransformer(transformers=transformers, remainder='passthrough')
+                    preprocessor = ColumnTransformer(
+                        transformers=transformers, 
+                        remainder='passthrough',
+                        verbose_feature_names_out=False  # Critical fix
+                    )
                     
                     # Fit on training data and transform both sets
                     X_train_imputed = preprocessor.fit_transform(X_train)
                     X_test_imputed = preprocessor.transform(X_test)
                     
                     # Get feature names in correct order
-                    feature_names_ordered = []
-                    for name, transformer, features in transformers:
-                        feature_names_ordered.extend(features)
+                    if hasattr(preprocessor, 'get_feature_names_out'):
+                        # Use modern method if available (sklearn >= 1.0)
+                        feature_names_ordered = preprocessor.get_feature_names_out()
+                    else:
+                        # Fallback for older sklearn versions
+                        feature_names_ordered = []
+                        for name, transformer, features in transformers:
+                            feature_names_ordered.extend(features)
+                        # Add remainder features
+                        all_features = X_train.columns.tolist()
+                        transformed_features = set()
+                        for _, _, features in transformers:
+                            transformed_features.update(features)
+                        remainder_features = [f for f in all_features if f not in transformed_features]
+                        feature_names_ordered.extend(remainder_features)
                     
                     # Convert back to DataFrame
                     X_train_imputed = pd.DataFrame(
@@ -281,6 +304,20 @@ class DataPreprocessor:
             # Reconstruct full dataframes
             train_df = pd.concat([X_train_imputed, y_train], axis=1)
             test_df = X_test_imputed
+        
+        # Convert numerical features to proper numeric types
+        for col in self.numerical_features:
+            if col in train_df.columns:
+                train_df[col] = pd.to_numeric(train_df[col], errors='coerce')
+            if col in test_df.columns:
+                test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
+        
+        # Convert categorical features to category type
+        for col in self.categorical_features:
+            if col in train_df.columns:
+                train_df[col] = train_df[col].astype('category')
+            if col in test_df.columns:
+                test_df[col] = test_df[col].astype('category')
         
         # Update stored data
         self.train_data = train_df
