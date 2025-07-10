@@ -263,31 +263,49 @@ class ModelTrainer:
             # Calculate metrics
             metrics = self.calculate_metrics(y_val, y_pred, y_proba)
             
+            # Get feature coefficients
+            coefficients = dict(zip(X_train.columns, baseline_model.coef_[0]))
+            
             # Store results
             self.models['baseline_logistic'] = baseline_model
             self.training_times['baseline_logistic'] = timer.elapsed
             self.memory_usage['baseline_logistic'] = get_memory_usage()
         
-        # Log results
-        module_logger.info("Baseline model performance:")
-        for metric, value in metrics.items():
-            module_logger.info(f"  {metric}: {value:.4f}")
+        # Log results with formatted summary
+        from src.utils import print_model_summary
+        print_model_summary("Baseline Logistic Regression", metrics, timer.elapsed, coefficients)
         
-        # Save baseline model
+        # Prepare metadata with proper type conversion
         metadata = {
             'model_type': 'logistic_regression',
             'is_baseline': True,
             'metrics': metrics,
-            'training_time': timer.elapsed,
-            'class_weight': class_weight
+            'training_time': float(timer.elapsed),
+            'class_weight': class_weight,
+            'feature_count': len(X_train.columns),
+            'training_samples': len(X_train),
+            'validation_samples': len(X_val),
+            'class_distribution': {
+                'train': y_train.value_counts().to_dict(),
+                'validation': y_val.value_counts().to_dict()
+            },
+            'top_features': dict(sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)[:10])
         }
-        save_model(baseline_model, 'baseline_logistic', BASELINE_MODELS_DIR, metadata)
+        
+        # Save baseline model
+        try:
+            model_path = save_model(baseline_model, 'baseline_logistic', BASELINE_MODELS_DIR, metadata)
+            module_logger.info(f"Baseline model successfully saved to {model_path}")
+        except Exception as e:
+            module_logger.error(f"Failed to save baseline model: {str(e)}")
+            raise
         
         return {
             'model': baseline_model,
             'metrics': metrics,
-            'training_time': timer.elapsed,
-            'coefficients': dict(zip(X_train.columns, baseline_model.coef_[0]))
+            'training_time': float(timer.elapsed),
+            'coefficients': coefficients,
+            'model_path': model_path
         }
     
     def train_model_with_tuning(self, model_name: str,

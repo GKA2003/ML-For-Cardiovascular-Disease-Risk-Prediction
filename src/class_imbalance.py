@@ -14,7 +14,7 @@ import seaborn as sns
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
-from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
+from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, SMOTENC
 from imblearn.under_sampling import RandomUnderSampler, TomekLinks
 from imblearn.combine import SMOTETomek, SMOTEENN
 
@@ -122,20 +122,68 @@ class ImbalanceHandler:
         
         return self.class_weights
     
+    def _validate_data_for_smote(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Validate and prepare data for SMOTE.
+        
+        Args:
+            X: Feature matrix
+            
+        Returns:
+            Validated and converted DataFrame
+        """
+        module_logger.info("Validating data for SMOTE...")
+        
+        X_validated = X.copy()
+        
+        # Check for non-numeric columns
+        non_numeric_cols = X_validated.select_dtypes(exclude=[np.number]).columns.tolist()
+        
+        if non_numeric_cols:
+            module_logger.warning(f"Found non-numeric columns: {non_numeric_cols}")
+            
+            # Try to convert to numeric
+            for col in non_numeric_cols:
+                try:
+                    X_validated[col] = pd.to_numeric(X_validated[col], errors='coerce')
+                    module_logger.info(f"Converted {col} to numeric")
+                except Exception as e:
+                    module_logger.error(f"Could not convert {col} to numeric: {e}")
+                    raise ValueError(f"Column '{col}' contains non-numeric data that cannot be converted: {X_validated[col].dtype}")
+        
+        # Check for missing values after conversion
+        if X_validated.isnull().any().any():
+            module_logger.warning("Found missing values after conversion, filling with 0")
+            X_validated = X_validated.fillna(0)
+        
+        # Ensure all columns are numeric
+        for col in X_validated.columns:
+            if not pd.api.types.is_numeric_dtype(X_validated[col]):
+                module_logger.error(f"Column {col} is still non-numeric: {X_validated[col].dtype}")
+                raise ValueError(f"Column '{col}' could not be converted to numeric")
+        
+        module_logger.info("Data validation for SMOTE completed successfully")
+        return X_validated
+    
     def apply_smote(self, X: pd.DataFrame, y: pd.Series, 
-                   variant: str = 'regular') -> Tuple[pd.DataFrame, pd.Series]:
+                   variant: str = 'regular',
+                   categorical_features: List[int] = None) -> Tuple[pd.DataFrame, pd.Series]:
         """
         Apply SMOTE or its variants for oversampling.
         
         Args:
             X: Feature matrix
             y: Target variable
-            variant: SMOTE variant ('regular', 'borderline', 'adasyn')
+            variant: SMOTE variant ('regular', 'borderline', 'adasyn', 'nc')
+            categorical_features: Indices of categorical features (for SMOTE-NC)
             
         Returns:
             Resampled X and y
         """
         module_logger.info(f"Applying SMOTE variant: {variant}")
+        
+        # Validate data first
+        X_validated = self._validate_data_for_smote(X)
         
         # Select SMOTE variant
         if variant == 'regular':
@@ -144,28 +192,56 @@ class ImbalanceHandler:
             sampler = BorderlineSMOTE(random_state=self.random_state)
         elif variant == 'adasyn':
             sampler = ADASYN(random_state=self.random_state)
+        elif variant == 'nc' and categorical_features is not None:
+            # Validate categorical features indices
+            valid_cat_features = [i for i in categorical_features if i < len(X_validated.columns)]
+            if not valid_cat_features:
+                module_logger.warning("No valid categorical features found, falling back to regular SMOTE")
+                sampler = SMOTE(random_state=self.random_state)
+            else:
+                module_logger.info(f"Using SMOTE-NC with categorical features at indices: {valid_cat_features}")
+                sampler = SMOTENC(
+                    categorical_features=valid_cat_features,
+                    random_state=self.random_state
+                )
         else:
-            raise ValueError(f"Unknown SMOTE variant: {variant}")
+            module_logger.warning(f"Unknown SMOTE variant '{variant}' or missing categorical features, using regular SMOTE")
+            sampler = SMOTE(random_state=self.random_state)
         
-        # Apply resampling
-        X_resampled, y_resampled = sampler.fit_resample(X, y)
-        
-        # Convert back to DataFrame
-        X_resampled = pd.DataFrame(X_resampled, columns=X.columns)
-        y_resampled = pd.Series(y_resampled, name=y.name)
-        
-        # Log results
-        original_counts = Counter(y)
-        resampled_counts = Counter(y_resampled)
-        module_logger.info(f"Original distribution: {dict(original_counts)}")
-        module_logger.info(f"Resampled distribution: {dict(resampled_counts)}")
-        
-        self.sampling_strategies[variant] = {
-            'original': dict(original_counts),
-            'resampled': dict(resampled_counts)
-        }
-        
-        return X_resampled, y_resampled
+        try:
+            # Apply resampling
+            X_resampled, y_resampled = sampler.fit_resample(X_validated, y)
+            
+            # Convert back to DataFrame
+            X_resampled = pd.DataFrame(X_resampled, columns=X_validated.columns)
+            y_resampled = pd.Series(y_resampled, name=y.name)
+            
+            # Log results
+            original_counts = Counter(y)
+            resampled_counts = Counter(y_resampled)
+            module_logger.info(f"Original distribution: {dict(original_counts)}")
+            module_logger.info(f"Resampled distribution: {dict(resampled_counts)}")
+            
+            self.sampling_strategies[variant] = {
+                'original': dict(original_counts),
+                'resampled': dict(resampled_counts)
+            }
+            
+            return X_resampled, y_resampled
+            
+        except Exception as e:
+            module_logger.error(f"SMOTE failed: {str(e)}")
+            module_logger.info("Falling back to regular SMOTE without categorical features")
+            
+            # Fallback to regular SMOTE
+            sampler = SMOTE(random_state=self.random_state)
+            X_resampled, y_resampled = sampler.fit_resample(X_validated, y)
+            
+            # Convert back to DataFrame
+            X_resampled = pd.DataFrame(X_resampled, columns=X_validated.columns)
+            y_resampled = pd.Series(y_resampled, name=y.name)
+            
+            return X_resampled, y_resampled
     
     def apply_undersampling(self, X: pd.DataFrame, y: pd.Series,
                            method: str = 'random') -> Tuple[pd.DataFrame, pd.Series]:
@@ -182,6 +258,9 @@ class ImbalanceHandler:
         """
         module_logger.info(f"Applying undersampling: {method}")
         
+        # Validate data
+        X_validated = self._validate_data_for_smote(X)
+        
         if method == 'random':
             sampler = RandomUnderSampler(random_state=self.random_state)
         elif method == 'tomek':
@@ -190,10 +269,10 @@ class ImbalanceHandler:
             raise ValueError(f"Unknown undersampling method: {method}")
         
         # Apply resampling
-        X_resampled, y_resampled = sampler.fit_resample(X, y)
+        X_resampled, y_resampled = sampler.fit_resample(X_validated, y)
         
         # Convert back to DataFrame
-        X_resampled = pd.DataFrame(X_resampled, columns=X.columns)
+        X_resampled = pd.DataFrame(X_resampled, columns=X_validated.columns)
         y_resampled = pd.Series(y_resampled, name=y.name)
         
         # Log results
@@ -219,6 +298,9 @@ class ImbalanceHandler:
         """
         module_logger.info(f"Applying combined sampling: {method}")
         
+        # Validate data
+        X_validated = self._validate_data_for_smote(X)
+        
         if method == 'smote_tomek':
             sampler = SMOTETomek(random_state=self.random_state)
         elif method == 'smote_enn':
@@ -227,10 +309,10 @@ class ImbalanceHandler:
             raise ValueError(f"Unknown combined method: {method}")
         
         # Apply resampling
-        X_resampled, y_resampled = sampler.fit_resample(X, y)
+        X_resampled, y_resampled = sampler.fit_resample(X_validated, y)
         
         # Convert back to DataFrame
-        X_resampled = pd.DataFrame(X_resampled, columns=X.columns)
+        X_resampled = pd.DataFrame(X_resampled, columns=X_validated.columns)
         y_resampled = pd.Series(y_resampled, name=y.name)
         
         # Log results
@@ -260,7 +342,7 @@ class ImbalanceHandler:
         module_logger.info(f"Finding optimal threshold for {metric}...")
         
         # Try different thresholds
-        thresholds = np.linspace(0.1, 0.9, 81)
+        thresholds = np.linspace(0.01, 0.99, 99)
         scores = []
         
         for threshold in thresholds:
@@ -311,7 +393,8 @@ class ImbalanceHandler:
         return best_threshold
     
     def compare_sampling_methods(self, X: pd.DataFrame, y: pd.Series,
-                               methods: List[str] = None) -> pd.DataFrame:
+                               methods: List[str] = None,
+                               categorical_indices: List[int] = None) -> pd.DataFrame:
         """
         Compare different sampling methods.
         
@@ -319,6 +402,7 @@ class ImbalanceHandler:
             X: Feature matrix
             y: Target variable
             methods: List of methods to compare
+            categorical_indices: Indices of categorical features
             
         Returns:
             Comparison DataFrame
@@ -326,79 +410,94 @@ class ImbalanceHandler:
         if methods is None:
             methods = ['none', 'smote', 'borderline_smote', 'adasyn', 
                       'random_under', 'smote_tomek']
+            
+            # Add SMOTE-NC if categorical features are available
+            if categorical_indices and len(categorical_indices) > 0:
+                methods.append('smote_nc')
         
-        module_logger.info("Comparing sampling methods...")
+        module_logger.info(f"Comparing sampling methods: {methods}")
         
         results = []
         
         for method in methods:
             module_logger.info(f"\nTesting method: {method}")
             
-            # Apply sampling
-            if method == 'none':
-                X_sampled, y_sampled = X, y
-            elif method == 'smote':
-                X_sampled, y_sampled = self.apply_smote(X, y, 'regular')
-            elif method == 'borderline_smote':
-                X_sampled, y_sampled = self.apply_smote(X, y, 'borderline')
-            elif method == 'adasyn':
-                X_sampled, y_sampled = self.apply_smote(X, y, 'adasyn')
-            elif method == 'random_under':
-                X_sampled, y_sampled = self.apply_undersampling(X, y, 'random')
-            elif method == 'smote_tomek':
-                X_sampled, y_sampled = self.apply_combined_sampling(X, y, 'smote_tomek')
-            else:
+            try:
+                # Apply sampling
+                if method == 'none':
+                    X_sampled, y_sampled = X, y
+                elif method == 'smote':
+                    X_sampled, y_sampled = self.apply_smote(X, y, 'regular')
+                elif method == 'borderline_smote':
+                    X_sampled, y_sampled = self.apply_smote(X, y, 'borderline')
+                elif method == 'adasyn':
+                    X_sampled, y_sampled = self.apply_smote(X, y, 'adasyn')
+                elif method == 'random_under':
+                    X_sampled, y_sampled = self.apply_undersampling(X, y, 'random')
+                elif method == 'smote_tomek':
+                    X_sampled, y_sampled = self.apply_combined_sampling(X, y, 'smote_tomek')
+                elif method == 'smote_nc' and categorical_indices:
+                    X_sampled, y_sampled = self.apply_smote(
+                        X, y, 'nc', categorical_indices
+                    )
+                else:
+                    module_logger.warning(f"Skipping method {method} (not applicable)")
+                    continue
+                
+                # Calculate statistics
+                class_counts = Counter(y_sampled)
+                
+                results.append({
+                    'method': method,
+                    'total_samples': len(y_sampled),
+                    'class_0_count': class_counts[0],
+                    'class_1_count': class_counts[1],
+                    'class_0_pct': class_counts[0] / len(y_sampled) * 100,
+                    'class_1_pct': class_counts[1] / len(y_sampled) * 100,
+                    'imbalance_ratio': class_counts[0] / class_counts[1] if class_counts[1] > 0 else np.inf
+                })
+                
+            except Exception as e:
+                module_logger.error(f"Failed to apply method {method}: {str(e)}")
                 continue
-            
-            # Calculate statistics
-            class_counts = Counter(y_sampled)
-            
-            results.append({
-                'method': method,
-                'total_samples': len(y_sampled),
-                'class_0_count': class_counts[0],
-                'class_1_count': class_counts[1],
-                'class_0_pct': class_counts[0] / len(y_sampled) * 100,
-                'class_1_pct': class_counts[1] / len(y_sampled) * 100,
-                'imbalance_ratio': class_counts[0] / class_counts[1] if class_counts[1] > 0 else np.inf
-            })
         
         comparison_df = pd.DataFrame(results)
         
-        # Create visualisation
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
-        
-        # Sample counts
-        methods_list = comparison_df['method'].tolist()
-        x_pos = np.arange(len(methods_list))
-        
-        width = 0.35
-        ax1.bar(x_pos - width/2, comparison_df['class_0_count'], width, 
-               label='Class 0', color='skyblue')
-        ax1.bar(x_pos + width/2, comparison_df['class_1_count'], width, 
-               label='Class 1', color='salmon')
-        
-        ax1.set_xlabel('Sampling Method')
-        ax1.set_ylabel('Sample Count')
-        ax1.set_title('Class Distribution by Sampling Method')
-        ax1.set_xticks(x_pos)
-        ax1.set_xticklabels(methods_list, rotation=45)
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        
-        # Imbalance ratios
-        ax2.bar(x_pos, comparison_df['imbalance_ratio'], color='lightgreen')
-        ax2.set_xlabel('Sampling Method')
-        ax2.set_ylabel('Imbalance Ratio')
-        ax2.set_title('Imbalance Ratio by Sampling Method')
-        ax2.set_xticks(x_pos)
-        ax2.set_xticklabels(methods_list, rotation=45)
-        ax2.axhline(y=1, color='r', linestyle='--', label='Perfect balance')
-        ax2.legend()
-        ax2.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        save_figure(fig, 'sampling_methods_comparison', 'imbalance')
+        if len(comparison_df) > 0:
+            # Create visualisation
+            fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+            
+            # Sample counts
+            methods_list = comparison_df['method'].tolist()
+            x_pos = np.arange(len(methods_list))
+            
+            width = 0.35
+            axes[0].bar(x_pos - width/2, comparison_df['class_0_count'], width, 
+                   label='Class 0', color='skyblue')
+            axes[0].bar(x_pos + width/2, comparison_df['class_1_count'], width, 
+                   label='Class 1', color='salmon')
+            
+            axes[0].set_xlabel('Sampling Method')
+            axes[0].set_ylabel('Sample Count')
+            axes[0].set_title('Class Distribution by Sampling Method')
+            axes[0].set_xticks(x_pos)
+            axes[0].set_xticklabels(methods_list, rotation=45)
+            axes[0].legend()
+            axes[0].grid(True, alpha=0.3)
+            
+            # Imbalance ratios
+            axes[1].bar(x_pos, comparison_df['imbalance_ratio'], color='lightgreen')
+            axes[1].set_xlabel('Sampling Method')
+            axes[1].set_ylabel('Imbalance Ratio')
+            axes[1].set_title('Imbalance Ratio by Sampling Method')
+            axes[1].set_xticks(x_pos)
+            axes[1].set_xticklabels(methods_list, rotation=45)
+            axes[1].axhline(y=1, color='r', linestyle='--', label='Perfect balance')
+            axes[1].legend()
+            axes[1].grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            save_figure(fig, 'sampling_methods_comparison', 'imbalance')
         
         return comparison_df
     
@@ -436,7 +535,6 @@ class ImbalanceHandler:
         
         return folds
 
-
 def demonstrate_imbalance_handling(X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
     """
     Demonstrate various imbalance handling techniques.
@@ -456,8 +554,20 @@ def demonstrate_imbalance_handling(X: pd.DataFrame, y: pd.Series) -> Dict[str, A
     # Calculate class weights
     class_weights = handler.calculate_class_weights(y)
     
+    # Identify categorical features by checking for encoded features
+    categorical_indices = []
+    for i, col in enumerate(X.columns):
+        if col.endswith('_encoded') or col in ['age_group', 'bmi_category', 'chol_category', 
+                                               'glucose_category', 'smoking_intensity', 
+                                               'hypertension_stage', 'hr_category']:
+            categorical_indices.append(i)
+    
+    module_logger.info(f"Identified categorical feature indices: {categorical_indices}")
+    
     # Compare sampling methods
-    comparison = handler.compare_sampling_methods(X, y)
+    comparison = handler.compare_sampling_methods(
+        X, y, categorical_indices=categorical_indices
+    )
     
     # Create stratified folds
     folds = handler.create_stratified_folds(X, y)

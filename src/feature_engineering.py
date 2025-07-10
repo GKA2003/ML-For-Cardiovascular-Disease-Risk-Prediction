@@ -8,7 +8,7 @@ import pandas as pd
 from typing import Tuple, List, Dict, Optional, Union
 import logging
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -37,12 +37,13 @@ class FeatureEngineer:
             categorical_features: List of categorical feature names
             numerical_features: List of numerical feature names
         """
-        self.categorical_features = categorical_features
-        self.numerical_features = numerical_features
+        self.categorical_features = categorical_features.copy()
+        self.numerical_features = numerical_features.copy()
         self.feature_names = None
         self.new_features = []
         self.scalers = {}
         self.encoders = {}
+        self.categorical_mappings = {}  # Store mappings for consistency
         
     def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> pd.DataFrame:
         """
@@ -70,14 +71,19 @@ class FeatureEngineer:
             # 3. Create binned features
             X_engineered = self._create_binned_features(X_engineered)
             
-            # 4. Handle categorical encoding
+            # 4. Handle categorical encoding (fit encoders)
             X_engineered = self._encode_categorical_features(X_engineered, fit=True)
+            
+            # 5. Update feature lists
+            self._update_feature_lists(X_engineered)
             
             # Store final feature names
             self.feature_names = X_engineered.columns.tolist()
             
             module_logger.info(f"Feature engineering complete. Total features: {len(self.feature_names)}")
             module_logger.info(f"New features created: {len(self.new_features)}")
+            module_logger.info(f"Final numerical features: {len(self.numerical_features)}")
+            module_logger.info(f"Final categorical features: {len(self.categorical_features)}")
             
         return X_engineered
     
@@ -135,15 +141,6 @@ class FeatureEngineer:
             # Age-adjusted cholesterol risk
             X['age_chol_risk'] = X['totChol'] / X['age']
             self.new_features.append('age_chol_risk')
-        
-        # Smoking impact
-        if 'is_smoking' in X.columns and 'cigsPerDay' in X.columns:
-            # Pack years approximation (assuming 20 years of smoking on average)
-            X['pack_years_approx'] = X.apply(
-                lambda row: row['cigsPerDay'] * 20 / 20 if row['is_smoking'] == 'YES' else 0,
-                axis=1
-            )
-            self.new_features.append('pack_years_approx')
         
         # Hypertension severity
         if 'sysBP' in X.columns and 'prevalentHyp' in X.columns:
@@ -224,63 +221,150 @@ class FeatureEngineer:
         
         # Age bins
         if 'age' in X.columns:
-            X['age_group'] = pd.cut(X['age'], bins=AGE_BINS, labels=AGE_LABELS, include_lowest=True)
-            X['age_group'] = X['age_group'].cat.codes  # Convert to numeric
+            X['age_group'] = pd.cut(X['age'], bins=AGE_BINS, labels=range(len(AGE_LABELS)), include_lowest=True)
+            X['age_group'] = X['age_group'].astype(int)
             self.new_features.append('age_group')
         
         # BMI categories (WHO classification)
         if 'BMI' in X.columns:
             bmi_bins = [0, 18.5, 25, 30, 35, 40, 100]
-            bmi_labels = ['Underweight', 'Normal', 'Overweight', 'Obese_I', 'Obese_II', 'Obese_III']
-            X['bmi_category'] = pd.cut(X['BMI'], bins=bmi_bins, labels=bmi_labels, include_lowest=True)
-            X['bmi_category'] = X['bmi_category'].cat.codes
+            X['bmi_category'] = pd.cut(X['BMI'], bins=bmi_bins, labels=range(6), include_lowest=True)
+            X['bmi_category'] = X['bmi_category'].astype(int)
             self.new_features.append('bmi_category')
         
         # Cholesterol levels (medical guidelines)
         if 'totChol' in X.columns:
             chol_bins = [0, 200, 240, 1000]
-            chol_labels = ['Desirable', 'Borderline', 'High']
-            X['chol_category'] = pd.cut(X['totChol'], bins=chol_bins, labels=chol_labels, include_lowest=True)
-            X['chol_category'] = X['chol_category'].cat.codes
+            X['chol_category'] = pd.cut(X['totChol'], bins=chol_bins, labels=range(3), include_lowest=True)
+            X['chol_category'] = X['chol_category'].astype(int)
             self.new_features.append('chol_category')
         
         # Glucose levels
         if 'glucose' in X.columns:
             glucose_bins = [0, 70, 100, 126, 1000]
-            glucose_labels = ['Low', 'Normal', 'Prediabetic', 'Diabetic']
-            X['glucose_category'] = pd.cut(X['glucose'], bins=glucose_bins, labels=glucose_labels, include_lowest=True)
-            X['glucose_category'] = X['glucose_category'].cat.codes
+            X['glucose_category'] = pd.cut(X['glucose'], bins=glucose_bins, labels=range(4), include_lowest=True)
+            X['glucose_category'] = X['glucose_category'].astype(int)
             self.new_features.append('glucose_category')
+        
+        # Handle cigsPerDay binning (if it exists and is categorical)
+        if 'cigsPerDay' in X.columns:
+            # Check if it's being treated as categorical
+            if 'cigsPerDay' in self.categorical_features:
+                module_logger.info("Binning high-cardinality feature: cigsPerDay")
+                
+                # Define bin edges and labels
+                bins = [-1, 0, 10, 20, 80]
+                
+                # Apply binning and convert to numeric codes
+                X['smoking_intensity'] = pd.cut(X['cigsPerDay'], bins=bins, labels=range(4), include_lowest=True)
+                X['smoking_intensity'] = X['smoking_intensity'].astype(int)
+                self.new_features.append('smoking_intensity')
+                
+                # Remove original column
+                X = X.drop(columns=['cigsPerDay'], errors='ignore')
+                
+                # Update feature lists
+                if 'cigsPerDay' in self.categorical_features:
+                    self.categorical_features.remove('cigsPerDay')
+                    self.categorical_features.append('smoking_intensity')
         
         return X
     
     def _encode_categorical_features(self, X: pd.DataFrame, fit: bool = True) -> pd.DataFrame:
-        """Encode categorical features."""
+        """Encode categorical features consistently."""
         module_logger.info("Encoding categorical features...")
         
-        # Handle sex encoding (binary)
-        if 'sex' in X.columns:
-            if fit:
-                self.encoders['sex'] = LabelEncoder()
-                X['sex_encoded'] = self.encoders['sex'].fit_transform(X['sex'])
-            else:
-                X['sex_encoded'] = self.encoders['sex'].transform(X['sex'])
-            X = X.drop('sex', axis=1)
-            
-        # Handle is_smoking encoding (binary)
-        if 'is_smoking' in X.columns:
-            if fit:
-                self.encoders['is_smoking'] = LabelEncoder()
-                X['is_smoking_encoded'] = self.encoders['is_smoking'].fit_transform(X['is_smoking'])
-            else:
-                X['is_smoking_encoded'] = self.encoders['is_smoking'].transform(X['is_smoking'])
-            X = X.drop('is_smoking', axis=1)
+        # Get all categorical columns that exist in the dataframe
+        categorical_cols_to_encode = [col for col in self.categorical_features if col in X.columns]
+        
+        # Handle each categorical feature
+        for col in categorical_cols_to_encode:
+            if col in ['sex', 'is_smoking']:
+                # Binary categorical features - use label encoding
+                if fit:
+                    self.encoders[col] = LabelEncoder()
+                    X[f'{col}_encoded'] = self.encoders[col].fit_transform(X[col])
+                    # Store mapping for reference
+                    self.categorical_mappings[col] = dict(zip(
+                        self.encoders[col].classes_, 
+                        range(len(self.encoders[col].classes_))
+                    ))
+                else:
+                    # Handle unseen categories during transform
+                    try:
+                        X[f'{col}_encoded'] = self.encoders[col].transform(X[col])
+                    except ValueError as e:
+                        module_logger.warning(f"Unseen category in {col}: {e}")
+                        # Use most frequent class for unseen categories
+                        X[f'{col}_encoded'] = 0
+                
+                # Remove original column
+                X = X.drop(columns=[col], errors='ignore')
+                
+            elif col in X.columns:
+                # Handle other categorical features
+                if X[col].dtype == 'object' or X[col].dtype.name == 'category':
+                    # For string categorical features, use ordinal encoding
+                    if fit:
+                        self.encoders[col] = OrdinalEncoder(handle_unknown='use_encoded_value', unknown_value=-1)
+                        X[[f'{col}_encoded']] = self.encoders[col].fit_transform(X[[col]])
+                        # Store categories for reference
+                        self.categorical_mappings[col] = dict(zip(
+                            self.encoders[col].categories_[0], 
+                            range(len(self.encoders[col].categories_[0]))
+                        ))
+                    else:
+                        X[[f'{col}_encoded']] = self.encoders[col].transform(X[[col]])
+                    
+                    # Remove original column
+                    X = X.drop(columns=[col], errors='ignore')
+                else:
+                    # Already numeric, keep as is
+                    pass
         
         return X
+    
+    def _update_feature_lists(self, X: pd.DataFrame) -> None:
+        """Update categorical and numerical feature lists after engineering."""
+        # Get all columns
+        all_columns = X.columns.tolist()
+        
+        # Update numerical features (include new numeric features)
+        numeric_columns = X.select_dtypes(include=[np.number]).columns.tolist()
+        
+        # Update categorical features (encoded features are now numeric)
+        categorical_columns = []
+        for col in all_columns:
+            if col.endswith('_encoded'):
+                categorical_columns.append(col)
+            elif col in self.categorical_features and col in X.columns:
+                # Check if it's still categorical
+                if X[col].dtype == 'object' or X[col].dtype.name == 'category':
+                    categorical_columns.append(col)
+        
+        # Update lists
+        self.numerical_features = [col for col in numeric_columns if col not in categorical_columns]
+        self.categorical_features = categorical_columns
+        
+        module_logger.info(f"Updated feature lists after engineering:")
+        module_logger.info(f"  Numerical: {len(self.numerical_features)} features")
+        module_logger.info(f"  Categorical: {len(self.categorical_features)} features")
     
     def get_feature_names(self) -> List[str]:
         """Get list of all feature names after engineering."""
         return self.feature_names
+    
+    def get_categorical_indices(self) -> List[int]:
+        """Get indices of categorical features for algorithms that need them."""
+        if not self.feature_names:
+            return []
+        
+        categorical_indices = []
+        for i, col in enumerate(self.feature_names):
+            if col in self.categorical_features:
+                categorical_indices.append(i)
+        
+        return categorical_indices
     
     def get_new_feature_descriptions(self) -> Dict[str, str]:
         """Get descriptions of newly created features."""
@@ -289,7 +373,6 @@ class FeatureEngineer:
             'mean_arterial_pressure': 'Diastolic BP + (Pulse Pressure / 3)',
             'metabolic_risk': 'Combined risk from BMI > 30 and glucose > 100',
             'age_chol_risk': 'Total cholesterol / age',
-            'pack_years_approx': 'Approximate pack-years for smokers',
             'hypertension_stage': 'Hypertension severity (0-4 scale)',
             'hr_category': 'Heart rate category (0=brady, 1=normal, 2=tachy)',
             'age_smoking_interaction': 'Age × smoking status',
@@ -297,13 +380,21 @@ class FeatureEngineer:
             'bp_meds_effectiveness': 'Systolic BP × (1 - BP medication)',
             'chol_age_interaction': 'Total cholesterol × age / 100',
             'risk_factor_count': 'Count of major risk factors',
-            'age_group': 'Age group category',
-            'bmi_category': 'BMI category (WHO classification)',
-            'chol_category': 'Cholesterol level category',
-            'glucose_category': 'Glucose level category'
+            'age_group': 'Age group category (0-3)',
+            'bmi_category': 'BMI category (0-5, WHO classification)',
+            'chol_category': 'Cholesterol level category (0-2)',
+            'glucose_category': 'Glucose level category (0-3)',
+            'smoking_intensity': 'Smoking intensity category (0-3)'
         }
         
         return {feat: descriptions.get(feat, 'Unknown') for feat in self.new_features}
+    
+    def get_encoding_info(self) -> Dict[str, Dict]:
+        """Get information about categorical encodings."""
+        return {
+            'mappings': self.categorical_mappings,
+            'encoders': list(self.encoders.keys())
+        }
 
 
 class FeatureScaler:
@@ -345,10 +436,13 @@ class FeatureScaler:
         scaler = self.scaling_strategies.get(strategy, StandardScaler())
         self.scalers[strategy] = scaler
         
-        # Fit and transform numerical features
-        X_scaled[numerical_features] = scaler.fit_transform(X[numerical_features])
+        # Filter numerical features that exist in the dataframe
+        features_to_scale = [col for col in numerical_features if col in X.columns]
         
-        module_logger.info(f"Applied {strategy} scaling to {len(numerical_features)} features")
+        if features_to_scale:
+            # Fit and transform numerical features
+            X_scaled[features_to_scale] = scaler.fit_transform(X[features_to_scale])
+            module_logger.info(f"Applied {strategy} scaling to {len(features_to_scale)} features")
         
         return X_scaled
     
@@ -375,8 +469,12 @@ class FeatureScaler:
         X_scaled = X.copy()
         scaler = self.scalers[strategy]
         
-        # Transform numerical features
-        X_scaled[numerical_features] = scaler.transform(X[numerical_features])
+        # Filter numerical features that exist in the dataframe
+        features_to_scale = [col for col in numerical_features if col in X.columns]
+        
+        if features_to_scale:
+            # Transform numerical features
+            X_scaled[features_to_scale] = scaler.transform(X[features_to_scale])
         
         return X_scaled
 
@@ -419,6 +517,12 @@ def create_feature_engineering_pipeline(train_df: pd.DataFrame,
     for feat, desc in engineer.get_new_feature_descriptions().items():
         module_logger.info(f"  {feat}: {desc}")
     
+    # Log encoding information
+    encoding_info = engineer.get_encoding_info()
+    module_logger.info(f"\nCategorical encodings applied:")
+    for col, mapping in encoding_info['mappings'].items():
+        module_logger.info(f"  {col}: {mapping}")
+    
     return X_engineered, engineer
 
 
@@ -443,6 +547,11 @@ if __name__ == "__main__":
     module_logger.info(f"\nOriginal features: {len(preprocessor.feature_names)}")
     module_logger.info(f"Engineered features: {len(engineer.feature_names)}")
     module_logger.info(f"New features added: {len(engineer.new_features)}")
+    
+    # Check data types
+    module_logger.info("\nFinal data types:")
+    for col in train_engineered.columns:
+        module_logger.info(f"  {col}: {train_engineered[col].dtype}")
     
     # Save engineered data
     train_engineered.to_csv(PROCESSED_DATA_DIR / "train_engineered.csv", index=False)

@@ -91,6 +91,37 @@ def load_data(file_path: Union[str, Path], **kwargs) -> pd.DataFrame:
         logger.error(f"Error loading {file_path}: {str(e)}")
         raise
 
+def convert_numpy_types(obj: Any) -> Any:
+    """
+    Recursively convert numpy types to native Python types for JSON serialization.
+    
+    Args:
+        obj: Object to convert
+        
+    Returns:
+        Object with numpy types converted to native Python types
+    """
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, dict):
+        return {convert_numpy_types(k): convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(convert_numpy_types(item) for item in obj)
+    elif isinstance(obj, set):
+        return {convert_numpy_types(item) for item in obj}
+    elif pd.isna(obj):
+        return None
+    else:
+        return obj
+
 # Model saving and loading
 def save_model(model: Any, model_name: str, directory: Path, 
                metadata: Optional[Dict] = None) -> Path:
@@ -123,11 +154,23 @@ def save_model(model: Any, model_name: str, directory: Path,
     
     # Save metadata if provided
     if metadata:
-        metadata['timestamp'] = timestamp
-        metadata['model_file'] = str(model_path.name)
+        # Convert numpy types to JSON-serializable types
+        metadata_serializable = convert_numpy_types(metadata)
+        
+        # Add timestamp and model file info
+        metadata_serializable['timestamp'] = timestamp
+        metadata_serializable['model_file'] = str(model_path.name)
+        
         metadata_path = directory / f"{filename}_metadata.json"
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
+        
+        try:
+            with open(metadata_path, 'w') as f:
+                json.dump(metadata_serializable, f, indent=2, default=str)
+            logger.info(f"Metadata saved to {metadata_path}")
+        except Exception as e:
+            logger.error(f"Failed to save metadata: {str(e)}")
+            # Still save the model even if metadata fails
+            logger.warning("Model saved but metadata could not be saved")
     
     logger.info(f"Model saved to {model_path}")
     return model_path
@@ -154,6 +197,26 @@ def load_model(model_path: Union[str, Path]) -> Any:
     
     logger.info(f"Model loaded from {model_path}")
     return model
+
+def load_model_metadata(metadata_path: Union[str, Path]) -> Dict[str, Any]:
+    """
+    Load model metadata from JSON file.
+    
+    Args:
+        metadata_path: Path to the metadata JSON file
+        
+    Returns:
+        Metadata dictionary
+    """
+    metadata_path = Path(metadata_path)
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"Metadata not found: {metadata_path}")
+    
+    with open(metadata_path, 'r') as f:
+        metadata = json.load(f)
+    
+    logger.info(f"Metadata loaded from {metadata_path}")
+    return metadata
 
 # Data validation
 def validate_dataframe(df: pd.DataFrame, expected_columns: List[str],
@@ -190,7 +253,13 @@ def format_metrics(metrics: Dict[str, float], precision: int = 4) -> Dict[str, s
     Returns:
         Formatted metrics dictionary
     """
-    return {k: f"{v:.{precision}f}" for k, v in metrics.items()}
+    formatted = {}
+    for k, v in metrics.items():
+        if isinstance(v, (int, float, np.number)):
+            formatted[k] = f"{float(v):.{precision}f}"
+        else:
+            formatted[k] = str(v)
+    return formatted
 
 # Save figure with timestamp
 def save_figure(fig: plt.Figure, name: str, 
@@ -235,7 +304,10 @@ def create_results_table(results: List[Dict[str, Any]],
     Returns:
         Formatted DataFrame
     """
-    df = pd.DataFrame(results)
+    # Convert numpy types in results
+    results_converted = [convert_numpy_types(result) for result in results]
+    
+    df = pd.DataFrame(results_converted)
     if sort_by in df.columns:
         df = df.sort_values(sort_by, ascending=ascending)
     return df
@@ -338,8 +410,8 @@ def create_model_card(model_name: str,
     model_card = {
         "model_name": model_name,
         "created_at": datetime.now().isoformat(),
-        "performance_metrics": performance_metrics,
-        "training_details": training_details,
+        "performance_metrics": convert_numpy_types(performance_metrics),
+        "training_details": convert_numpy_types(training_details),
         "feature_importance": feature_importance.to_dict() if feature_importance is not None else None,
         "framework_versions": {
             "numpy": np.__version__,
@@ -355,6 +427,71 @@ def create_model_card(model_name: str,
         pass
     
     return model_card
+
+def save_results_table(results: List[Dict[str, Any]], 
+                      filename: str,
+                      directory: Path = TABLES_DIR) -> Path:
+    """
+    Save results table to CSV with proper type conversion.
+    
+    Args:
+        results: List of result dictionaries
+        filename: Name of the file (without extension)
+        directory: Directory to save the file
+        
+    Returns:
+        Path to saved file
+    """
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    
+    # Convert numpy types
+    results_converted = [convert_numpy_types(result) for result in results]
+    
+    # Create DataFrame and save
+    df = pd.DataFrame(results_converted)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = directory / f"{filename}_{timestamp}.csv"
+    
+    df.to_csv(filepath, index=False)
+    logger.info(f"Results table saved to {filepath}")
+    
+    return filepath
+
+def print_model_summary(model_name: str, metrics: Dict[str, float], 
+                       training_time: float, coefficients: Optional[Dict[str, float]] = None) -> None:
+    """
+    Print a formatted summary of model performance.
+    
+    Args:
+        model_name: Name of the model
+        metrics: Performance metrics
+        training_time: Training time in seconds
+        coefficients: Optional feature coefficients (for linear models)
+    """
+    print(f"\n{'='*60}")
+    print(f"{model_name.upper()} MODEL SUMMARY")
+    print(f"{'='*60}")
+    
+    print(f"\nTraining Time: {training_time:.4f} seconds")
+    
+    print(f"\nPerformance Metrics:")
+    print(f"{'-'*30}")
+    for metric, value in metrics.items():
+        if isinstance(value, (int, float, np.number)):
+            print(f"{metric:>20s}: {float(value):>8.4f}")
+        else:
+            print(f"{metric:>20s}: {str(value):>8s}")
+    
+    if coefficients:
+        print(f"\nTop 10 Feature Coefficients (by magnitude):")
+        print(f"{'-'*50}")
+        sorted_coefs = sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
+        for feat, coef in sorted_coefs:
+            print(f"{feat:>30s}: {coef:>10.4f}")
+    
+    print(f"\n{'='*60}")
 
 # Initialise utilities
 set_random_seeds()
