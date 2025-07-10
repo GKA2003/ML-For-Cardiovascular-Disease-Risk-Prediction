@@ -434,8 +434,30 @@ class ExploratoryDataAnalyzer:
         return bivariate_figs
     
     def _perform_statistical_tests(self) -> Dict[str, pd.DataFrame]:
-        """Perform statistical tests for feature significance with type safety."""
-        module_logger.info("Performing statistical tests...")
+        """Perform statistical tests with effect size reporting."""
+        module_logger.info("Performing statistical tests with effect size reporting...")
+        
+        # Helper function for Cliff's Delta
+        def cliffs_delta(x, y):
+            """Calculate Cliff's delta effect size."""
+            nx, ny = len(x), len(y)
+            wins = 0
+            for i in x:
+                for j in y:
+                    if i > j:
+                        wins += 1
+                    elif i < j:
+                        wins -= 1
+            return wins / (nx * ny)
+        
+        # Helper function for Cramér's V
+        def cramers_v(contingency_table):
+            """Calculate Cramér's V effect size."""
+            chi2 = stats.chi2_contingency(contingency_table)[0]
+            n = contingency_table.sum().sum()
+            phi2 = chi2 / n
+            r, k = contingency_table.shape
+            return np.sqrt(phi2 / min(k-1, r-1))
         
         test_results = {}
         
@@ -452,7 +474,7 @@ class ExploratoryDataAnalyzer:
                 # Separate by target class
                 class_0 = self.train_data[self.train_data[TARGET_COLUMN] == 0][col].dropna()
                 class_1 = self.train_data[self.train_data[TARGET_COLUMN] == 1][col].dropna()
-    
+
                 # Skip if not enough data
                 if len(class_0) < 3 or len(class_1) < 3:
                     module_logger.warning(f"Insufficient data for '{col}' statistical test")
@@ -472,12 +494,26 @@ class ExploratoryDataAnalyzer:
                     stat, p_value = stats.mannwhitneyu(class_0, class_1)
                     test_type = 'Mann-Whitney U'
                 
+                # Calculate Cliff's Delta effect size
+                d_val = cliffs_delta(class_0, class_1)
+                
+                # Determine effect magnitude
+                effect_magnitude = 'negligible'
+                if abs(d_val) > 0.474:
+                    effect_magnitude = 'large'
+                elif abs(d_val) > 0.33:
+                    effect_magnitude = 'medium'
+                elif abs(d_val) > 0.147:
+                    effect_magnitude = 'small'
+                
                 numerical_tests.append({
                     'feature': col,
                     'test': test_type,
                     'statistic': stat,
                     'p_value': p_value,
-                    'significant': p_value < 0.05 if p_value else None
+                    'significant': p_value < 0.05 if p_value else None,
+                    'effect_size': d_val,
+                    'effect_magnitude': effect_magnitude
                 })
             
             test_results['numerical'] = pd.DataFrame(numerical_tests)
@@ -487,15 +523,33 @@ class ExploratoryDataAnalyzer:
             categorical_tests = []
 
             for col in self.categorical_features:
-                # ensure reasonable cardinality
+                # Skip high cardinality features (we've binned cigsPerDay)
                 if self.train_data[col].nunique() > 20:
                     module_logger.warning(f"Skipping high cardinality feature '{col}' in categorical tests")
                     continue
 
                 # Chi-square test
                 crosstab = pd.crosstab(self.train_data[col], 
-                                      self.train_data[TARGET_COLUMN])
+                                    self.train_data[TARGET_COLUMN])
+                
+                # Skip if any expected frequencies < 5
+                min_expected = stats.chi2_contingency(crosstab)[3].min()
+                if min_expected < 5:
+                    module_logger.warning(f"Low expected frequencies for '{col}' - consider Fisher's exact test")
+                
                 chi2, p_value, dof, expected = stats.chi2_contingency(crosstab)
+                
+                # Calculate Cramér's V effect size
+                v_val = cramers_v(crosstab)
+                
+                # Determine effect magnitude
+                effect_magnitude = 'negligible'
+                if v_val > 0.5:
+                    effect_magnitude = 'large'
+                elif v_val > 0.3:
+                    effect_magnitude = 'medium'
+                elif v_val > 0.1:
+                    effect_magnitude = 'small'
                 
                 categorical_tests.append({
                     'feature': col,
@@ -503,7 +557,9 @@ class ExploratoryDataAnalyzer:
                     'statistic': chi2,
                     'p_value': p_value,
                     'dof': dof,
-                    'significant': p_value < 0.05
+                    'significant': p_value < 0.05,
+                    'effect_size': v_val,
+                    'effect_magnitude': effect_magnitude
                 })
             
             test_results['categorical'] = pd.DataFrame(categorical_tests)

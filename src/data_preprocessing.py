@@ -192,12 +192,12 @@ class DataPreprocessor:
         module_logger.info(f"Categorical features ({len(categorical_features)}): {categorical_features}")
         module_logger.info(f"Numerical features ({len(numerical_features)}): {numerical_features}")    
     
-    
+
     def handle_missing_values(self, strategy: str = 'median', 
                             threshold: float = 0.5) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Handle missing values in the datasets with proper type conversion.
-        Now includes outlier capping and distribution transformation.
+        Now includes outlier capping, distribution transformation, and high-cardinality feature binning.
         """
         module_logger.info(f"Handling missing values with strategy: {strategy}")
         
@@ -306,7 +306,7 @@ class DataPreprocessor:
             if col in test_df.columns:
                 test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
         
-        # === NEW OUTLIER HANDLING AND DISTRIBUTION TRANSFORMATION ===
+        # === OUTLIER HANDLING AND DISTRIBUTION TRANSFORMATION ===
         # Identify numerical features (excluding identifiers)
         valid_numerical = [col for col in self.numerical_features 
                         if col not in ['id'] and 
@@ -348,7 +348,34 @@ class DataPreprocessor:
             
             if skewed_features:
                 module_logger.info(f"Applied log transformation to skewed features: {skewed_features}")
-        # === END OF NEW IMPLEMENTATION ===
+        
+        # === HIGH-CARDINALITY FEATURE BINNING ===
+        # Bin cigsPerDay feature to reduce cardinality
+        if 'cigsPerDay' in self.categorical_features and 'cigsPerDay' in train_df.columns:
+            module_logger.info("Binning high-cardinality feature: cigsPerDay")
+            
+            # Define bin edges and labels
+            bins = [-1, 0, 10, 20, 80]
+            labels = ['non_smoker', 'light', 'moderate', 'heavy']
+            
+            # Apply binning
+            train_df['smoking_intensity'] = pd.cut(
+                train_df['cigsPerDay'], bins=bins, labels=labels, include_lowest=True
+            )
+            if 'cigsPerDay' in test_df.columns:
+                test_df['smoking_intensity'] = pd.cut(
+                    test_df['cigsPerDay'], bins=bins, labels=labels, include_lowest=True
+                )
+            
+            # Update feature metadata
+            self.categorical_features.remove('cigsPerDay')
+            self.categorical_features.append('smoking_intensity')
+            self.feature_names = [f if f != 'cigsPerDay' else 'smoking_intensity' 
+                                for f in self.feature_names]
+            
+            # Remove original column
+            train_df = train_df.drop(columns=['cigsPerDay'], errors='ignore')
+            test_df = test_df.drop(columns=['cigsPerDay'], errors='ignore')
         
         # Convert categorical features to category type
         for col in self.categorical_features:
