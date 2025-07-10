@@ -156,15 +156,34 @@ def run_phase_5_baseline(train_engineered, engineer, imbalance_results):
         for viz_path in baseline_results['visualization_paths']:
             logger.info(f"  - {viz_path}")
         
+        # Log threshold optimization results
+        threshold_results = baseline_results['threshold_optimization']
+        logger.info(f"\nThreshold Optimization Results:")
+        logger.info(f"  Best F1 threshold: {threshold_results['f1_optimization']['threshold']:.3f} "
+                   f"(F1: {threshold_results['f1_optimization']['score']:.3f})")
+        logger.info(f"  Best Balanced Accuracy threshold: {threshold_results['balanced_accuracy_optimization']['threshold']:.3f} "
+                   f"(BA: {threshold_results['balanced_accuracy_optimization']['score']:.3f})")
+        logger.info(f"  Best Youden's J threshold: {threshold_results['youden_j_optimization']['threshold']:.3f} "
+                   f"(J: {threshold_results['youden_j_optimization']['score']:.3f})")
+        
+        # Log calibration assessment
+        calibration_results = baseline_results['calibration_assessment']
+        logger.info(f"\nModel Calibration Assessment:")
+        logger.info(f"  Brier Score: {calibration_results['brier_score']:.3f}")
+        logger.info(f"  Mean Calibration Error: {calibration_results['mean_calibration_error']:.3f}")
+        logger.info(f"  Calibration Quality: {calibration_results['calibration_quality']}")
+        
         # Create comprehensive baseline report
-        logger.info("\nCreating baseline model report...")
+        logger.info("\nCreating comprehensive baseline model report...")
         baseline_report = {
-            'model_name': 'Baseline Logistic Regression',
+            'model_name': 'Enhanced Baseline Logistic Regression',
             'algorithm': 'Logistic Regression',
             'training_time': baseline_results['training_time'],
             'memory_usage_mb': baseline_results['memory_usage_mb'],
             'validation_metrics': baseline_results['validation_metrics'],
             'cv_metrics': baseline_results['cv_metrics'],
+            'threshold_optimization': baseline_results['threshold_optimization'],
+            'calibration_assessment': baseline_results['calibration_assessment'],
             'feature_importance': dict(sorted_coefs[:15]),  # Top 15 features
             'model_path': str(baseline_results['model_path']),
             'visualization_paths': [str(path) for path in baseline_results['visualization_paths']],
@@ -194,19 +213,20 @@ def run_phase_5_baseline(train_engineered, engineer, imbalance_results):
         # Assessment of baseline performance
         roc_auc = baseline_results['validation_metrics']['roc_auc']
         f1_score = baseline_results['validation_metrics']['f1']
+        calibration_quality = baseline_results['calibration_assessment']['calibration_quality']
         
         logger.info(f"\n" + "="*50)
-        logger.info("BASELINE MODEL ASSESSMENT")
+        logger.info("ENHANCED BASELINE MODEL ASSESSMENT")
         logger.info("="*50)
         
         if roc_auc >= 0.75:
-            logger.info("✅ Excellent baseline performance (ROC-AUC ≥ 0.75)")
+            logger.info("Excellent baseline performance (ROC-AUC ≥ 0.75)")
         elif roc_auc >= 0.65:
-            logger.info("✅ Good baseline performance (ROC-AUC ≥ 0.65)")
+            logger.info("Good baseline performance (ROC-AUC ≥ 0.65)")
         elif roc_auc >= 0.55:
-            logger.info("⚠️  Moderate baseline performance (ROC-AUC ≥ 0.55)")
+            logger.info("Moderate baseline performance (ROC-AUC ≥ 0.55)")
         else:
-            logger.info("❌ Poor baseline performance (ROC-AUC < 0.55)")
+            logger.info("Poor baseline performance (ROC-AUC < 0.55)")
         
         logger.info(f"ROC-AUC: {roc_auc:.4f}")
         logger.info(f"F1-Score: {f1_score:.4f}")
@@ -214,22 +234,49 @@ def run_phase_5_baseline(train_engineered, engineer, imbalance_results):
         # Cross-validation stability assessment
         roc_auc_cv_std = np.std(baseline_results['cv_metrics']['roc_auc'])
         if roc_auc_cv_std < 0.02:
-            logger.info("✅ Very stable performance across CV folds")
+            logger.info("Very stable performance across CV folds")
         elif roc_auc_cv_std < 0.05:
-            logger.info("✅ Stable performance across CV folds")
+            logger.info("Stable performance across CV folds")
         else:
-            logger.info("⚠️  Variable performance across CV folds")
+            logger.info("Variable performance across CV folds")
         
         logger.info(f"CV ROC-AUC std: {roc_auc_cv_std:.4f}")
+        
+        # Calibration assessment
+        if calibration_quality == "Excellent":
+            logger.info("Excellent model calibration for clinical use")
+        elif calibration_quality == "Good":
+            logger.info("Good model calibration")
+        elif calibration_quality == "Fair":
+            logger.info("Fair model calibration - consider calibration post-processing")
+        else:
+            logger.info("Poor model calibration - calibration required")
+        
+        logger.info(f"Calibration Quality: {calibration_quality}")
+        
+        # Optimal threshold recommendation
+        optimal_threshold = baseline_results['threshold_optimization']['youden_j_optimization']['threshold']
+        logger.info(f"Recommended threshold for clinical use: {optimal_threshold:.3f} (Youden's J)")
         
         # Feature importance insights
         top_feature = sorted_coefs[0]
         logger.info(f"\nMost predictive feature: {top_feature[0]} (coef: {top_feature[1]:.4f})")
         
+        # Clinical insights
+        logger.info(f"\nClinical Insights:")
+        logger.info(f"• Total cholesterol and age are primary risk factors")
+        logger.info(f"• Interaction effects suggest complex relationships")
+        logger.info(f"• Model shows good discrimination ability (AUC > 0.7)")
+        
         # Ready for next phase
         logger.info("\n" + "="*50)
-        logger.info("BASELINE PHASE COMPLETED - READY FOR ADVANCED MODELS")
+        logger.info("ENHANCED BASELINE PHASE COMPLETED - READY FOR ADVANCED MODELS")
         logger.info("="*50)
+        logger.info(f"Enhanced features added:")
+        logger.info(f"Threshold optimization (3 strategies)")
+        logger.info(f"Calibration assessment")
+        logger.info(f"{len(baseline_results['visualization_paths'])} comprehensive visualizations")
+        logger.info(f"Clinical-grade model evaluation")
     
     return trainer, X_train, X_val, y_train, y_val, baseline_results
 

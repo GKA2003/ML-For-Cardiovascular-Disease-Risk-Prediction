@@ -188,6 +188,14 @@ class ModelTrainer:
                 coefficients, X_train.columns
             )
             
+            # Perform threshold optimization for imbalanced data
+            module_logger.info("Performing threshold optimization...")
+            threshold_results = self._optimize_classification_threshold(y_val, y_proba)
+            
+            # Calculate calibration metrics
+            module_logger.info("Assessing model calibration...")
+            calibration_results = self._assess_model_calibration(y_val, y_proba)
+            
             # Store results
             self.models['baseline_logistic'] = baseline_model
             self.training_times['baseline_logistic'] = timer.elapsed
@@ -215,6 +223,8 @@ class ModelTrainer:
             'validation_metrics': val_metrics,
             'cv_metrics': {k: {'mean': float(np.mean(v)), 'std': float(np.std(v)), 'scores': [float(x) for x in v]} 
                           for k, v in cv_results.items()},
+            'threshold_optimization': threshold_results,
+            'calibration_assessment': calibration_results,
             'training_time': float(timer.elapsed),
             'memory_usage_mb': float(memory_mb),
             'class_weight': class_weight,
@@ -227,7 +237,7 @@ class ModelTrainer:
                 'validation': y_val.value_counts().to_dict()
             },
             'top_features': dict(sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)[:10]),
-            'visualization_paths': [str(path) for path in viz_paths]
+            'visualization_paths': [str(path) for path in viz_paths] + [threshold_results['visualization_path'], calibration_results['visualization_path']]
         }
         
         # Save baseline model
@@ -242,11 +252,13 @@ class ModelTrainer:
             'model': baseline_model,
             'validation_metrics': val_metrics,
             'cv_metrics': cv_results,
+            'threshold_optimization': threshold_results,
+            'calibration_assessment': calibration_results,
             'training_time': float(timer.elapsed),
             'memory_usage_mb': float(memory_mb),
             'coefficients': coefficients,
             'model_path': model_path,
-            'visualization_paths': viz_paths
+            'visualization_paths': viz_paths + [threshold_results['visualization_path'], calibration_results['visualization_path']]
         }
     
     def _perform_baseline_cv(self, model: Any, X: pd.DataFrame, y: pd.Series, 
@@ -457,6 +469,240 @@ class ModelTrainer:
         
         module_logger.info(f"Generated {len(viz_paths)} baseline visualizations")
         return viz_paths
+    
+    def _optimize_classification_threshold(self, y_true: np.ndarray, y_proba: np.ndarray) -> Dict[str, Any]:
+        """
+        Find optimal classification thresholds for different metrics.
+        
+        Args:
+            y_true: True labels
+            y_proba: Predicted probabilities
+            
+        Returns:
+            Dictionary with optimal thresholds and corresponding metrics
+        """
+        from sklearn.metrics import precision_recall_curve
+        
+        # Test different thresholds
+        thresholds = np.linspace(0.01, 0.99, 99)
+        
+        results = {
+            'f1_optimization': {'threshold': 0.5, 'score': 0.0},
+            'balanced_accuracy_optimization': {'threshold': 0.5, 'score': 0.0},
+            'youden_j_optimization': {'threshold': 0.5, 'score': 0.0}
+        }
+        
+        best_f1 = 0
+        best_balanced_acc = 0
+        best_youden_j = 0
+        
+        for threshold in thresholds:
+            y_pred_thresh = (y_proba >= threshold).astype(int)
+            
+            # Calculate metrics
+            f1 = f1_score(y_true, y_pred_thresh, zero_division=0)
+            
+            # Balanced accuracy
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred_thresh).ravel()
+            sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+            balanced_acc = (sensitivity + specificity) / 2
+            
+            # Youden's J statistic (sensitivity + specificity - 1)
+            youden_j = sensitivity + specificity - 1
+            
+            # Update best thresholds
+            if f1 > best_f1:
+                best_f1 = f1
+                results['f1_optimization'] = {'threshold': threshold, 'score': f1}
+            
+            if balanced_acc > best_balanced_acc:
+                best_balanced_acc = balanced_acc
+                results['balanced_accuracy_optimization'] = {
+                    'threshold': threshold, 'score': balanced_acc,
+                    'sensitivity': sensitivity, 'specificity': specificity
+                }
+            
+            if youden_j > best_youden_j:
+                best_youden_j = youden_j
+                results['youden_j_optimization'] = {
+                    'threshold': threshold, 'score': youden_j,
+                    'sensitivity': sensitivity, 'specificity': specificity
+                }
+        
+        # Create threshold optimization visualization
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(12, 10))
+        
+        # Plot threshold vs F1
+        f1_scores = []
+        balanced_accs = []
+        youden_js = []
+        
+        for threshold in thresholds:
+            y_pred_thresh = (y_proba >= threshold).astype(int)
+            f1_scores.append(f1_score(y_true, y_pred_thresh, zero_division=0))
+            
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred_thresh).ravel()
+            sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+            specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+            balanced_accs.append((sensitivity + specificity) / 2)
+            youden_js.append(sensitivity + specificity - 1)
+        
+        # F1 Score vs Threshold
+        ax1.plot(thresholds, f1_scores, 'b-', linewidth=2)
+        ax1.axvline(results['f1_optimization']['threshold'], color='r', linestyle='--',
+                   label=f"Optimal: {results['f1_optimization']['threshold']:.3f}")
+        ax1.set_xlabel('Threshold')
+        ax1.set_ylabel('F1 Score')
+        ax1.set_title('F1 Score vs Classification Threshold')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # Balanced Accuracy vs Threshold
+        ax2.plot(thresholds, balanced_accs, 'g-', linewidth=2)
+        ax2.axvline(results['balanced_accuracy_optimization']['threshold'], color='r', linestyle='--',
+                   label=f"Optimal: {results['balanced_accuracy_optimization']['threshold']:.3f}")
+        ax2.set_xlabel('Threshold')
+        ax2.set_ylabel('Balanced Accuracy')
+        ax2.set_title('Balanced Accuracy vs Threshold')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        
+        # Youden's J vs Threshold
+        ax3.plot(thresholds, youden_js, 'm-', linewidth=2)
+        ax3.axvline(results['youden_j_optimization']['threshold'], color='r', linestyle='--',
+                   label=f"Optimal: {results['youden_j_optimization']['threshold']:.3f}")
+        ax3.set_xlabel('Threshold')
+        ax3.set_ylabel("Youden's J Statistic")
+        ax3.set_title("Youden's J vs Threshold")
+        ax3.legend()
+        ax3.grid(True, alpha=0.3)
+        
+        # Summary table
+        ax4.axis('off')
+        summary_text = f"""
+        Threshold Optimization Results
+        ══════════════════════════════
+        
+        F1 Score Optimization:
+        • Optimal Threshold: {results['f1_optimization']['threshold']:.3f}
+        • Best F1 Score: {results['f1_optimization']['score']:.3f}
+        
+        Balanced Accuracy Optimization:
+        • Optimal Threshold: {results['balanced_accuracy_optimization']['threshold']:.3f}
+        • Best Balanced Accuracy: {results['balanced_accuracy_optimization']['score']:.3f}
+        • Sensitivity: {results['balanced_accuracy_optimization']['sensitivity']:.3f}
+        • Specificity: {results['balanced_accuracy_optimization']['specificity']:.3f}
+        
+        Youden's J Optimization:
+        • Optimal Threshold: {results['youden_j_optimization']['threshold']:.3f}
+        • Best Youden's J: {results['youden_j_optimization']['score']:.3f}
+        • Sensitivity: {results['youden_j_optimization']['sensitivity']:.3f}
+        • Specificity: {results['youden_j_optimization']['specificity']:.3f}
+        
+        Recommendation for Medical Applications:
+        Use Youden's J threshold for balanced sensitivity/specificity
+        """
+        ax4.text(0.05, 0.95, summary_text, transform=ax4.transAxes, fontsize=10,
+                verticalalignment='top', fontfamily='monospace')
+        
+        plt.tight_layout()
+        viz_path = save_figure(fig, 'baseline_threshold_optimization', 'baseline')
+        plt.close(fig)
+        
+        results['visualization_path'] = str(viz_path)
+        
+        module_logger.info("Threshold optimization completed:")
+        module_logger.info(f"  Best F1 threshold: {results['f1_optimization']['threshold']:.3f} "
+                         f"(F1: {results['f1_optimization']['score']:.3f})")
+        module_logger.info(f"  Best Balanced Accuracy threshold: {results['balanced_accuracy_optimization']['threshold']:.3f} "
+                         f"(BA: {results['balanced_accuracy_optimization']['score']:.3f})")
+        
+        return results
+    
+    def _assess_model_calibration(self, y_true: np.ndarray, y_proba: np.ndarray) -> Dict[str, Any]:
+        """
+        Assess model calibration using reliability diagrams and Brier score.
+        
+        Args:
+            y_true: True labels
+            y_proba: Predicted probabilities
+            
+        Returns:
+            Dictionary with calibration metrics
+        """
+        from sklearn.calibration import calibration_curve
+        from sklearn.metrics import brier_score_loss
+        
+        # Calculate calibration curve
+        fraction_of_positives, mean_predicted_value = calibration_curve(
+            y_true, y_proba, n_bins=10
+        )
+        
+        # Calculate Brier score (lower is better)
+        brier_score = brier_score_loss(y_true, y_proba)
+        
+        # Calculate calibration metrics
+        calibration_error = np.mean(np.abs(fraction_of_positives - mean_predicted_value))
+        max_calibration_error = np.max(np.abs(fraction_of_positives - mean_predicted_value))
+        
+        # Create calibration plot
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        
+        # Reliability diagram
+        ax1.plot(mean_predicted_value, fraction_of_positives, "s-", linewidth=2, label="Model")
+        ax1.plot([0, 1], [0, 1], "k:", label="Perfectly calibrated")
+        ax1.set_xlabel("Mean Predicted Probability")
+        ax1.set_ylabel("Fraction of Positives")
+        ax1.set_title("Reliability Diagram (Calibration)")
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # Add calibration metrics text
+        ax1.text(0.05, 0.95, f"Brier Score: {brier_score:.3f}\nMean Cal. Error: {calibration_error:.3f}\nMax Cal. Error: {max_calibration_error:.3f}",
+                transform=ax1.transAxes, verticalalignment='top', 
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue", alpha=0.7))
+        
+        # Histogram of predicted probabilities
+        ax2.hist(y_proba[y_true == 0], bins=20, alpha=0.7, label='No CHD', color='blue', density=True)
+        ax2.hist(y_proba[y_true == 1], bins=20, alpha=0.7, label='CHD', color='red', density=True)
+        ax2.set_xlabel('Predicted Probability')
+        ax2.set_ylabel('Density')
+        ax2.set_title('Distribution of Predicted Probabilities')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        viz_path = save_figure(fig, 'baseline_calibration_analysis', 'baseline')
+        plt.close(fig)
+        
+        results = {
+            'brier_score': float(brier_score),
+            'mean_calibration_error': float(calibration_error),
+            'max_calibration_error': float(max_calibration_error),
+            'fraction_of_positives': fraction_of_positives.tolist(),
+            'mean_predicted_value': mean_predicted_value.tolist(),
+            'visualization_path': str(viz_path)
+        }
+        
+        # Calibration assessment
+        if calibration_error < 0.05:
+            calibration_quality = "Excellent"
+        elif calibration_error < 0.1:
+            calibration_quality = "Good"
+        elif calibration_error < 0.15:
+            calibration_quality = "Fair"
+        else:
+            calibration_quality = "Poor"
+        
+        results['calibration_quality'] = calibration_quality
+        
+        module_logger.info("Model calibration assessment completed:")
+        module_logger.info(f"  Brier Score: {brier_score:.3f}")
+        module_logger.info(f"  Mean Calibration Error: {calibration_error:.3f}")
+        module_logger.info(f"  Calibration Quality: {calibration_quality}")
+        
+        return results
 
     def calculate_metrics(self, y_true: np.ndarray, 
                          y_pred: np.ndarray,
