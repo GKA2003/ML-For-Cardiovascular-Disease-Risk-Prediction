@@ -4,6 +4,7 @@ Handles data loading, cleaning, and initial preprocessing
 """
 
 import numpy as np
+from scipy import stats
 import pandas as pd
 from typing import Tuple, Dict, List, Optional, Union
 import logging
@@ -191,17 +192,12 @@ class DataPreprocessor:
         module_logger.info(f"Categorical features ({len(categorical_features)}): {categorical_features}")
         module_logger.info(f"Numerical features ({len(numerical_features)}): {numerical_features}")    
     
+    
     def handle_missing_values(self, strategy: str = 'median', 
                             threshold: float = 0.5) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Handle missing values in the datasets with proper type conversion.
-        
-        Args:
-            strategy: Imputation strategy ('mean', 'median', 'mode', 'knn', 'drop')
-            threshold: Threshold for dropping columns with missing values
-            
-        Returns:
-            Tuple of (train_df, test_df) with missing values handled
+        Now includes outlier capping and distribution transformation.
         """
         module_logger.info(f"Handling missing values with strategy: {strategy}")
         
@@ -262,7 +258,7 @@ class DataPreprocessor:
                     preprocessor = ColumnTransformer(
                         transformers=transformers, 
                         remainder='passthrough',
-                        verbose_feature_names_out=False  # Critical fix
+                        verbose_feature_names_out=False
                     )
                     
                     # Fit on training data and transform both sets
@@ -271,14 +267,11 @@ class DataPreprocessor:
                     
                     # Get feature names in correct order
                     if hasattr(preprocessor, 'get_feature_names_out'):
-                        # Use modern method if available (sklearn >= 1.0)
                         feature_names_ordered = preprocessor.get_feature_names_out()
                     else:
-                        # Fallback for older sklearn versions
                         feature_names_ordered = []
                         for name, transformer, features in transformers:
                             feature_names_ordered.extend(features)
-                        # Add remainder features
                         all_features = X_train.columns.tolist()
                         transformed_features = set()
                         for _, _, features in transformers:
@@ -305,12 +298,57 @@ class DataPreprocessor:
             train_df = pd.concat([X_train_imputed, y_train], axis=1)
             test_df = X_test_imputed
         
-        # Convert numerical features to proper numeric types
+        # === IMPORTANT: CONVERT NUMERICAL FEATURES FIRST ===
+        # Convert numerical features to proper numeric types BEFORE outlier handling
         for col in self.numerical_features:
             if col in train_df.columns:
                 train_df[col] = pd.to_numeric(train_df[col], errors='coerce')
             if col in test_df.columns:
                 test_df[col] = pd.to_numeric(test_df[col], errors='coerce')
+        
+        # === NEW OUTLIER HANDLING AND DISTRIBUTION TRANSFORMATION ===
+        # Identify numerical features (excluding identifiers)
+        valid_numerical = [col for col in self.numerical_features 
+                        if col not in ['id'] and 
+                        col in train_df.columns]
+        
+        if valid_numerical:
+            module_logger.info("Applying outlier capping and distribution transformations")
+            
+            # 1. Outlier capping at 5th and 95th percentiles
+            outlier_limits = {}
+            for col in valid_numerical:
+                # Only process if we have numeric data
+                if pd.api.types.is_numeric_dtype(train_df[col]):
+                    # Compute percentiles from training data only
+                    low = train_df[col].quantile(0.05)
+                    high = train_df[col].quantile(0.95)
+                    outlier_limits[col] = (low, high)
+                    
+                    # Apply capping to both train and test
+                    train_df[col] = train_df[col].clip(lower=low, upper=high)
+                    if col in test_df.columns and pd.api.types.is_numeric_dtype(test_df[col]):
+                        test_df[col] = test_df[col].clip(lower=low, upper=high)
+            
+            # 2. Apply log transformation to skewed features
+            skewed_features = []
+            for col in valid_numerical:
+                # Only process if we have numeric data
+                if pd.api.types.is_numeric_dtype(train_df[col]):
+                    # Skip if constant values
+                    if train_df[col].nunique() > 1:
+                        # Identify features with significant skewness
+                        skew_val = stats.skew(train_df[col].dropna())
+                        if abs(skew_val) > 0.5:  # Threshold for moderate skew
+                            skewed_features.append(col)
+                            # Apply log1p transformation (handles zeros)
+                            train_df[col] = np.log1p(train_df[col])
+                            if col in test_df.columns and pd.api.types.is_numeric_dtype(test_df[col]):
+                                test_df[col] = np.log1p(test_df[col])
+            
+            if skewed_features:
+                module_logger.info(f"Applied log transformation to skewed features: {skewed_features}")
+        # === END OF NEW IMPLEMENTATION ===
         
         # Convert categorical features to category type
         for col in self.categorical_features:
