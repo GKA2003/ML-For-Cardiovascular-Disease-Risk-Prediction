@@ -3,6 +3,7 @@ Main orchestrator for Heart Disease ML Pipeline
 Coordinates all phases of the machine learning project
 """
 
+import numpy as np
 import argparse
 import logging
 import sys
@@ -123,26 +124,114 @@ def run_phase_5_baseline(train_engineered, engineer, imbalance_results):
         # Initialise model trainer
         trainer = ModelTrainer()
         
-        # Train baseline model
+        # Train enhanced baseline model
         baseline_results = trainer.train_baseline_model(
             X_train, y_train, X_val, y_val, class_weights
         )
         
-        # Log baseline results
-        logger.info("\nBaseline Logistic Regression Results:")
+        # Log enhanced baseline results
+        logger.info("\nEnhanced Baseline Logistic Regression Results:")
         logger.info(f"Training time: {baseline_results['training_time']:.2f} seconds")
+        logger.info(f"Memory usage: {baseline_results['memory_usage_mb']:.2f} MB")
+        
         logger.info("\nValidation metrics:")
-        for metric, value in baseline_results['metrics'].items():
+        for metric, value in baseline_results['validation_metrics'].items():
             logger.info(f"  {metric}: {value:.4f}")
         
-        # Log top coefficients
+        logger.info("\nCross-validation metrics (5-fold):")
+        for metric, scores in baseline_results['cv_metrics'].items():
+            mean_score = np.mean(scores)
+            std_score = np.std(scores)
+            logger.info(f"  {metric}: {mean_score:.4f} (+/- {std_score:.4f})")
+        
+        # Log feature importance
         coefficients = baseline_results['coefficients']
         sorted_coefs = sorted(coefficients.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
         logger.info("\nTop 10 most important features (by coefficient magnitude):")
         for feat, coef in sorted_coefs:
             logger.info(f"  {feat}: {coef:.4f}")
+        
+        # Log visualizations
+        logger.info(f"\nGenerated visualizations:")
+        for viz_path in baseline_results['visualization_paths']:
+            logger.info(f"  - {viz_path}")
+        
+        # Create comprehensive baseline report
+        logger.info("\nCreating baseline model report...")
+        baseline_report = {
+            'model_name': 'Baseline Logistic Regression',
+            'algorithm': 'Logistic Regression',
+            'training_time': baseline_results['training_time'],
+            'memory_usage_mb': baseline_results['memory_usage_mb'],
+            'validation_metrics': baseline_results['validation_metrics'],
+            'cv_metrics': baseline_results['cv_metrics'],
+            'feature_importance': dict(sorted_coefs[:15]),  # Top 15 features
+            'model_path': str(baseline_results['model_path']),
+            'visualization_paths': [str(path) for path in baseline_results['visualization_paths']],
+            'cross_validation_stability': {
+                metric: {
+                    'mean': float(np.mean(scores)),
+                    'std': float(np.std(scores)),
+                    'min': float(np.min(scores)),
+                    'max': float(np.max(scores)),
+                    'cv_coefficient': float(np.std(scores) / np.mean(scores)) if np.mean(scores) != 0 else 0
+                }
+                for metric, scores in baseline_results['cv_metrics'].items()
+            }
+        }
+        
+        # Save baseline report
+        import json
+        from src.utils import convert_numpy_types
+        report_clean = convert_numpy_types(baseline_report)
+        
+        report_path = TABLES_DIR / f"baseline_model_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(report_path, 'w') as f:
+            json.dump(report_clean, f, indent=2)
+        
+        logger.info(f"Baseline model report saved to: {report_path}")
+        
+        # Assessment of baseline performance
+        roc_auc = baseline_results['validation_metrics']['roc_auc']
+        f1_score = baseline_results['validation_metrics']['f1']
+        
+        logger.info(f"\n" + "="*50)
+        logger.info("BASELINE MODEL ASSESSMENT")
+        logger.info("="*50)
+        
+        if roc_auc >= 0.75:
+            logger.info("✅ Excellent baseline performance (ROC-AUC ≥ 0.75)")
+        elif roc_auc >= 0.65:
+            logger.info("✅ Good baseline performance (ROC-AUC ≥ 0.65)")
+        elif roc_auc >= 0.55:
+            logger.info("⚠️  Moderate baseline performance (ROC-AUC ≥ 0.55)")
+        else:
+            logger.info("❌ Poor baseline performance (ROC-AUC < 0.55)")
+        
+        logger.info(f"ROC-AUC: {roc_auc:.4f}")
+        logger.info(f"F1-Score: {f1_score:.4f}")
+        
+        # Cross-validation stability assessment
+        roc_auc_cv_std = np.std(baseline_results['cv_metrics']['roc_auc'])
+        if roc_auc_cv_std < 0.02:
+            logger.info("✅ Very stable performance across CV folds")
+        elif roc_auc_cv_std < 0.05:
+            logger.info("✅ Stable performance across CV folds")
+        else:
+            logger.info("⚠️  Variable performance across CV folds")
+        
+        logger.info(f"CV ROC-AUC std: {roc_auc_cv_std:.4f}")
+        
+        # Feature importance insights
+        top_feature = sorted_coefs[0]
+        logger.info(f"\nMost predictive feature: {top_feature[0]} (coef: {top_feature[1]:.4f})")
+        
+        # Ready for next phase
+        logger.info("\n" + "="*50)
+        logger.info("BASELINE PHASE COMPLETED - READY FOR ADVANCED MODELS")
+        logger.info("="*50)
     
-    return trainer, X_train, X_val, y_train, y_val
+    return trainer, X_train, X_val, y_train, y_val, baseline_results
 
 def run_phase_1_and_2():
     """Run Phase 1 (Setup) and Phase 2 (EDA)."""
@@ -326,7 +415,7 @@ def main():
                     'class_weights': handler.calculate_class_weights(y)
                 }
             
-            trainer, X_train, X_val, y_train, y_val = run_phase_5_baseline(
+            trainer, X_train, X_val, y_train, y_val, baseline_results = run_phase_5_baseline(
                 train_engineered, engineer, imbalance_results
             )
             
