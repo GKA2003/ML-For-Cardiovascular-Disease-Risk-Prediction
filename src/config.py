@@ -109,11 +109,17 @@ STRATIFIED = True
 TEST_SIZE = 0.2
 
 # Class imbalance strategies
+# Primary strategy chosen based on sampling comparison:
+# - SMOTE-NC balances classes to ~50:50 while retaining all majority samples.
+PRIMARY_IMBALANCE_STRATEGY = "smote_nc"
+SECONDARY_IMBALANCE_STRATEGIES = ["class_weight"]
+
 IMBALANCE_STRATEGIES = [
-    "class_weight",
-    "smote",
+    PRIMARY_IMBALANCE_STRATEGY,
+    *SECONDARY_IMBALANCE_STRATEGIES,
     "threshold_optimisation"
 ]
+
 
 # Evaluation metrics
 METRICS = [

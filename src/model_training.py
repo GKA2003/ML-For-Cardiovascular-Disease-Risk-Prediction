@@ -142,49 +142,42 @@ class ModelTrainer:
             Dictionary with model and results
         """
         module_logger.info("Training comprehensive baseline logistic regression model...")
-        
+
         with Timer("Baseline model training") as timer:
-            # Scale features for linear model
-            X_train_scaled = self.feature_scaler.fit_transform(
-                X_train, 
-                X_train.select_dtypes(include=[np.number]).columns.tolist(),
-                strategy='linear'
-            )
-            X_val_scaled = self.feature_scaler.transform(
-                X_val,
-                X_val.select_dtypes(include=[np.number]).columns.tolist(),
-                strategy='linear'
-            )
-            
-            # Train baseline model
-            baseline_model = LogisticRegression(
-                random_state=self.random_state,
-                max_iter=1000,
-                class_weight=class_weight
-            )
-            
-            baseline_model.fit(X_train_scaled, y_train)
-            
-            # Cross-validation evaluation
+            # Build sklearn pipeline: StandardScaler -> LogisticRegression
+            baseline_model = Pipeline([
+                ("scaler", StandardScaler()),
+                ("clf", LogisticRegression(
+                    random_state=self.random_state,
+                    max_iter=1000,
+                    class_weight=class_weight
+                ))
+            ])
+
+            # Fit on training data; scaling happens inside the pipeline
+            baseline_model.fit(X_train, y_train)
+
+            # Cross-validation evaluation (scaling done per-fold inside the pipeline)
             module_logger.info("Performing cross-validation evaluation...")
             cv_results = self._perform_baseline_cv(
-                baseline_model, X_train_scaled, y_train, cv_folds
+                baseline_model, X_train, y_train, cv_folds
             )
-            
-            # Get predictions on validation set
-            y_pred = baseline_model.predict(X_val_scaled)
-            y_proba = baseline_model.predict_proba(X_val_scaled)[:, 1]
-            
-            # Calculate validation metrics
+
+            # Predictions on validation set
+            y_pred = baseline_model.predict(X_val)
+            y_proba = baseline_model.predict_proba(X_val)[:, 1]
+
+            # Validation metrics
             val_metrics = self.calculate_metrics(y_val, y_pred, y_proba)
-            
-            # Get feature coefficients
-            coefficients = dict(zip(X_train.columns, baseline_model.coef_[0]))
-            
+
+            # Extract coefficients from the underlying logistic regression
+            log_reg = baseline_model.named_steps["clf"]
+            coefficients = dict(zip(X_train.columns, log_reg.coef_[0]))
+
             # Generate baseline visualizations
             module_logger.info("Generating baseline model visualizations...")
             viz_paths = self._create_baseline_visualizations(
-                baseline_model, X_val_scaled, y_val, y_pred, y_proba, 
+                baseline_model, X_val, y_val, y_pred, y_proba,
                 coefficients, X_train.columns
             )
             

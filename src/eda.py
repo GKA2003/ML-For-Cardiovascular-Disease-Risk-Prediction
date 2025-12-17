@@ -216,101 +216,119 @@ class ExploratoryDataAnalyzer:
         module_logger.info(f"Class imbalance ratio: {imbalance_ratio:.2f}")
         
         return target_results
-    
+
     def _analyze_feature_distributions(self) -> Dict[str, plt.Figure]:
         """Analyse and visualise feature distributions."""
         module_logger.info("Analysing feature distributions...")
-        
+
         distribution_figs = {}
-        
+
         # Numerical features
         if self.numerical_features:
             n_numerical = len(self.numerical_features)
             n_cols = 3
             n_rows = (n_numerical + n_cols - 1) // n_cols
-            
-            fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
+
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4 * n_rows))
             axes = axes.flatten() if n_rows > 1 else [axes]
-            
+
             for idx, col in enumerate(self.numerical_features):
                 ax = axes[idx]
-                
-                # Histogram with KDE
-                self.train_data[col].hist(bins=30, ax=ax, alpha=0.6, 
-                                         label='Train', density=True)
-                self.train_data[col].plot(kind='density', ax=ax, label='Train KDE')
-                
-                # Add test data if available
+
+                # Work on clean numeric series
+                train_series = pd.to_numeric(self.train_data[col], errors="coerce").dropna()
+                test_series = None
                 if col in self.test_data.columns:
-                    self.test_data[col].hist(bins=30, ax=ax, alpha=0.6, 
-                                            label='Test', density=True)
-                    self.test_data[col].plot(kind='density', ax=ax, 
-                                           label='Test KDE', linestyle='--')
-                
-                ax.set_title(f'Distribution of {col}')
+                    test_series = pd.to_numeric(self.test_data[col], errors="coerce").dropna()
+
+                # Always show histograms
+                if len(train_series) > 0:
+                    ax.hist(train_series, bins=30, alpha=0.6, label="Train", density=True)
+                if test_series is not None and len(test_series) > 0:
+                    ax.hist(test_series, bins=30, alpha=0.4, label="Test", density=True)
+
+                # Decide if KDE is safe: needs at least 2 unique values
+                can_do_kde = train_series.nunique() > 1
+                if not can_do_kde:
+                    module_logger.warning(
+                        f"Skipping KDE for '{col}' – only {train_series.nunique()} unique value(s)."
+                    )
+                else:
+                    # Try KDE and fall back gracefully if SciPy still complains
+                    try:
+                        train_series.plot(kind="density", ax=ax, label="Train KDE")
+                        if test_series is not None and len(test_series) > 1:
+                            test_series.plot(
+                                kind="density", ax=ax, label="Test KDE", linestyle="--"
+                            )
+                    except Exception as e:
+                        module_logger.warning(
+                            f"KDE failed for '{col}' with error '{e}'. "
+                            "Falling back to histograms only."
+                        )
+
+                ax.set_title(f"Distribution of {col}")
                 ax.set_xlabel(col)
-                ax.set_ylabel('Density')
+                ax.set_ylabel("Density")
                 ax.legend()
-            
+
             # Hide unused subplots
             for idx in range(len(self.numerical_features), len(axes)):
                 axes[idx].set_visible(False)
-            
+
             plt.tight_layout()
-            save_figure(fig, 'numerical_distributions', 'eda')
-            distribution_figs['numerical'] = fig
-        
-        # Categorical features
+            save_figure(fig, "numerical_distributions", "eda")
+            distribution_figs["numerical"] = fig
+
+        # Categorical features (unchanged)
         if self.categorical_features:
             n_categorical = len(self.categorical_features)
             n_cols = 2
             n_rows = (n_categorical + n_cols - 1) // n_cols
-            
-            fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows))
+
+            fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows))
             if n_rows == 1:
                 axes = axes.reshape(1, -1)
-            
+
             for idx, col in enumerate(self.categorical_features):
                 row = idx // n_cols
                 col_idx = idx % n_cols
                 ax = axes[row, col_idx]
-                
+
                 # Count plot
                 train_counts = self.train_data[col].value_counts()
                 test_counts = self.test_data[col].value_counts() if col in self.test_data.columns else None
-                
+
                 x_labels = train_counts.index
                 x_pos = np.arange(len(x_labels))
-                
-                ax.bar(x_pos - 0.2, train_counts.values, 0.4, 
-                      label='Train', alpha=0.8)
-                
+
+                ax.bar(x_pos - 0.2, train_counts.values, 0.4, label="Train", alpha=0.8)
+
                 if test_counts is not None:
                     # Align test counts with train labels
                     test_values = [test_counts.get(label, 0) for label in x_labels]
-                    ax.bar(x_pos + 0.2, test_values, 0.4, 
-                          label='Test', alpha=0.8)
-                
+                    ax.bar(x_pos + 0.2, test_values, 0.4, label="Test", alpha=0.8)
+
                 ax.set_xticks(x_pos)
                 ax.set_xticklabels(x_labels, rotation=45)
-                ax.set_title(f'Distribution of {col}')
+                ax.set_title(f"Distribution of {col}")
                 ax.set_xlabel(col)
-                ax.set_ylabel('Count')
+                ax.set_ylabel("Count")
                 ax.legend()
-            
+
             # Hide unused subplots
             total_subplots = n_rows * n_cols
             for idx in range(len(self.categorical_features), total_subplots):
                 row = idx // n_cols
                 col_idx = idx % n_cols
                 axes[row, col_idx].set_visible(False)
-            
+
             plt.tight_layout()
-            save_figure(fig, 'categorical_distributions', 'eda')
-            distribution_figs['categorical'] = fig
-        
+            save_figure(fig, "categorical_distributions", "eda")
+            distribution_figs["categorical"] = fig
+
         return distribution_figs
-    
+
     def _analyze_correlations(self) -> Dict[str, Any]:
         """Analyse feature correlations."""
         module_logger.info("Analysing correlations...")

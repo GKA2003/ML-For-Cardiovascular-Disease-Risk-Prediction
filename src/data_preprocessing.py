@@ -67,21 +67,31 @@ class DataPreprocessor:
             # Load datasets
             self.train_data = load_data(train_path)
             self.test_data = load_data(test_path)
-            
+
             # Store original shapes
             self.data_info['original_train_shape'] = self.train_data.shape
             self.data_info['original_test_shape'] = self.test_data.shape
-            
+
             module_logger.info(f"Train data shape: {self.train_data.shape}")
             module_logger.info(f"Test data shape: {self.test_data.shape}")
-            
+
+            # Drop identifier columns from modelling data
+            for name, df in (("train", self.train_data), ("test", self.test_data)):
+                if "id" in df.columns:
+                    df.drop(columns=["id"], inplace=True)
+                    module_logger.info(f"Dropped 'id' column from {name} data (identifier not used as a feature)")
+
             # Validate target column exists in train data
             if TARGET_COLUMN not in self.train_data.columns:
                 raise ValueError(f"Target column '{TARGET_COLUMN}' not found in training data")
-            
-            # Identify features
-            self.feature_names = [col for col in self.train_data.columns if col != TARGET_COLUMN]
-            
+
+            # Identify features (exclude target and identifier columns)
+            identifier_features = ["id"]
+            self.feature_names = [
+                col for col in self.train_data.columns
+                if col not in identifier_features and col != TARGET_COLUMN
+            ]
+
             # Validate test data has same features
             validate_dataframe(self.test_data, self.feature_names, "Test data")
             
@@ -165,12 +175,22 @@ class DataPreprocessor:
         identifier_features = ['id']  # Explicit identifier columns
         categorical_features = []
         numerical_features = []
-        
+
+        force_numeric = [
+            'age', 'totChol', 'sysBP', 'diaBP', 'BMI',
+            'heartRate', 'glucose',
+            'diabetes', 'prevalentHyp', 'BPMeds'
+        ]
+
         for col in self.feature_names:
             # Skip identifier columns
             if col in identifier_features:
                 continue
-                
+
+            if col in force_numeric:
+                numerical_features.append(col)
+                continue
+
             # Check actual data type
             if pd.api.types.is_numeric_dtype(self.train_data[col]):
                 # Check if it might be categorical (low cardinality)
@@ -335,8 +355,8 @@ class DataPreprocessor:
             for col in valid_numerical:
                 # Only process if we have numeric data
                 if pd.api.types.is_numeric_dtype(train_df[col]):
-                    # Skip if constant values
-                    if train_df[col].nunique() > 1:
+                    # Skip if constant values/binary
+                    if train_df[col].nunique() <= 2:
                         # Identify features with significant skewness
                         skew_val = stats.skew(train_df[col].dropna())
                         if abs(skew_val) > 0.5:  # Threshold for moderate skew

@@ -120,7 +120,12 @@ class FeatureEngineer:
     def _create_medical_features(self, X: pd.DataFrame) -> pd.DataFrame:
         """Create medically relevant features."""
         module_logger.info("Creating medical features...")
-        
+
+        numeric_cols = ['age', 'totChol', 'sysBP', 'diaBP', 'BMI', 'heartRate', 'glucose']
+        for col in numeric_cols:
+            if col in X.columns:
+                X[col] = pd.to_numeric(X[col], errors='coerce')
+
         # Pulse Pressure (systolic - diastolic BP)
         if 'sysBP' in X.columns and 'diaBP' in X.columns:
             X['pulse_pressure'] = X['sysBP'] - X['diaBP']
@@ -177,7 +182,13 @@ class FeatureEngineer:
     def _create_interaction_features(self, X: pd.DataFrame) -> pd.DataFrame:
         """Create interaction features between important variables."""
         module_logger.info("Creating interaction features...")
-        
+
+        # Ensure numeric types for variables used in arithmetic
+        numeric_for_interactions = ['age', 'BMI', 'diabetes', 'sysBP', 'prevalentHyp', 'BPMeds', 'totChol']
+        for col in numeric_for_interactions:
+            if col in X.columns:
+                X[col] = pd.to_numeric(X[col], errors='coerce')
+
         # Age and smoking interaction
         if 'age' in X.columns and 'is_smoking' in X.columns:
             X['age_smoking_interaction'] = X['age'] * (X['is_smoking'] == 'YES').astype(int)

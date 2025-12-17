@@ -6,7 +6,16 @@ Handles performance metrics, statistical tests, and model comparisons
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc, precision_recall_curve
+from sklearn.metrics import (
+    roc_curve,
+    auc,
+    precision_recall_curve,
+    roc_auc_score,
+    average_precision_score,
+    f1_score,
+    matthews_corrcoef,
+)
+
 from scipy import stats
 from src.config import FIGURES_DIR
 from src.utils import save_figure
