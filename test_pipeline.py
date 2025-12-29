@@ -4,8 +4,6 @@ Shows how to use the implemented modules with actual data
 """
 
 import pandas as pd
-import numpy as np
-from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -14,8 +12,8 @@ from src.config import RAW_DATA_DIR, PROCESSED_DATA_DIR, FIGURES_DIR, TARGET_COL
 from src.utils import set_random_seeds, logger
 from src.data_preprocessing import DataPreprocessor, quick_preprocess
 from src.eda import ExploratoryDataAnalyzer
-from src.feature_engineering import FeatureEngineer, create_feature_engineering_pipeline
-from src.class_imbalance import ImbalanceHandler, demonstrate_imbalance_handling
+from src.feature_engineering import create_feature_engineering_pipeline
+from src.class_imbalance import demonstrate_imbalance_handling
 from src.model_training import ModelTrainer
 
 def test_data_loading():

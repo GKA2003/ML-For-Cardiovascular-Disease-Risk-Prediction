@@ -43,6 +43,8 @@ TRAIN_FILE = "train.csv"
 TEST_FILE = "test.csv"
 TARGET_COLUMN = "TenYearCHD"
 
+RUN_EBM_IN_PHASE6 = False
+
 # Model configurations
 MODEL_CONFIGS = {
     "logistic_regression": {
@@ -101,12 +103,98 @@ MODEL_CONFIGS = {
     }
 }
 
+PHASE6_MODELS = [
+    "svm",
+    "random_forest",
+    "extra_trees",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "ebm",
+]
+
+# NOTE: These keys assume the model is in a Pipeline step named "model"
+ADVANCED_MODEL_PARAM_SPACES = {
+    "svm": {
+        "model__C": [1, 10, 50],
+        "model__kernel": ["rbf", "linear"],
+        "model__gamma": ["scale", "auto", 0.01, 0.1],
+        "model__class_weight": [None, "balanced"],
+    },
+    "random_forest": {
+        "model__n_estimators": [200, 400, 800],
+        "model__max_depth": [None, 5, 10, 20],
+        "model__min_samples_split": [2, 5, 10],
+        "model__min_samples_leaf": [1, 2, 4],
+        "model__max_features": ["sqrt", "log2", 0.5],
+        "model__bootstrap": [True, False],
+    },
+    "extra_trees": {
+        "model__n_estimators": [200, 400, 800],
+        "model__max_depth": [None, 5, 10, 20],
+        "model__min_samples_split": [2, 5, 10],
+        "model__min_samples_leaf": [1, 2, 4],
+        "model__max_features": ["sqrt", "log2", 0.5],
+    },
+    "xgboost": {
+        "model__n_estimators": [300, 600, 900],
+        "model__max_depth": [3, 4, 5, 6],
+        "model__learning_rate": [0.01, 0.05, 0.1, 0.2],
+        "model__subsample": [0.7, 0.85, 1.0],
+        "model__colsample_bytree": [0.7, 0.85, 1.0],
+        "model__min_child_weight": [1, 5, 10],
+        "model__reg_alpha": [0.0, 0.1, 1.0],
+        "model__reg_lambda": [1.0, 1.5, 2.0],
+        "model__gamma": [0.0, 0.1, 0.2],
+    },
+    "lightgbm": {
+        "model__n_estimators": [300, 600, 900],
+        "model__learning_rate": [0.01, 0.05, 0.1],
+        "model__num_leaves": [31, 63, 127],
+        "model__max_depth": [-1, 5, 10, 20],
+        "model__min_child_samples": [10, 20, 50],
+        "model__subsample": [0.7, 0.85, 1.0],
+        "model__colsample_bytree": [0.7, 0.85, 1.0],
+        "model__reg_alpha": [0.0, 0.1, 1.0],
+        "model__reg_lambda": [0.0, 1.0, 2.0],
+    },
+    "catboost": {
+        "model__iterations": [100, 300, 600],
+        "model__depth": [4, 6, 8],
+        "model__learning_rate": [0.01, 0.05, 0.1],
+        "model__l2_leaf_reg": [1, 3, 5, 7],
+        "model__border_count": [64, 128, 254],
+        "model__bagging_temperature": [0.0, 0.5, 1.0],
+    },
+    "ebm": {
+        "model__max_bins": [128, 256],
+        "model__max_interaction_bins": [16, 32],
+        "model__interactions": [0, 5],
+        "model__outer_bags": [4],
+        "model__inner_bags": [0],
+    },
+}
+
+TUNING_DEFAULT_SEARCH_TYPE = "random"  # or "grid"
+TUNING_N_ITER = 30
+TUNING_SCORING = "roc_auc"
+TUNING_N_JOBS = -1
+TUNING_VERBOSE = 1
+
+CALIBRATION_ENABLED = True
+CALIBRATION_METHOD = "sigmoid"  # "isotonic" is heavier
+CALIBRATION_CV = 5
+
+THRESHOLD_OPTIMISATION_ENABLED = True
+THRESHOLD_PRIMARY_STRATEGY = "f1"  # "f1" or "balanced_accuracy"
+
 # Cross-validation settings
 CV_FOLDS = 5
 STRATIFIED = True
 
 # Train-test split
 TEST_SIZE = 0.2
+VALIDATION_SIZE = 0.2
 
 # Class imbalance strategies
 # Primary strategy chosen based on sampling comparison:

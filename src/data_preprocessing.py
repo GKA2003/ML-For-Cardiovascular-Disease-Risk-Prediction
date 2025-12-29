@@ -6,22 +6,20 @@ Handles data loading, cleaning, and initial preprocessing
 import numpy as np
 from scipy import stats
 import pandas as pd
-from typing import Tuple, Dict, List, Optional, Union
+from typing import Tuple, Dict, Optional
 import logging
 from pathlib import Path
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 
 from src.config import (
     RAW_DATA_DIR, PROCESSED_DATA_DIR, 
     TRAIN_FILE, TEST_FILE, TARGET_COLUMN,
     RANDOM_SEED, TEST_SIZE
 )
-from src.utils import load_data, validate_dataframe, Timer, logger
+from src.utils import load_data, validate_dataframe, Timer
 
 # Get module logger
 module_logger = logging.getLogger(__name__)

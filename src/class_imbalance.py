@@ -5,14 +5,13 @@ Implements various strategies to handle imbalanced target distribution
 
 import numpy as np
 import pandas as pd
-from typing import Tuple, Dict, List, Optional, Union, Any
+from typing import Tuple, Dict, List, Any
 import logging
 from collections import Counter
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, SMOTENC
 from imblearn.under_sampling import RandomUnderSampler, TomekLinks
@@ -20,9 +19,9 @@ from imblearn.combine import SMOTETomek, SMOTEENN
 
 from src.config import (
     CV_FOLDS, RANDOM_SEED, TARGET_COLUMN,
-    FIGURES_DIR, TABLES_DIR
+    TABLES_DIR
 )
-from src.utils import Timer, logger, save_figure
+from src.utils import save_figure
 
 # Get module logger
 module_logger = logging.getLogger(__name__)
@@ -337,8 +336,8 @@ class ImbalanceHandler:
         Returns:
             Optimal threshold
         """
-        from sklearn.metrics import f1_score, balanced_accuracy_score, precision_recall_curve
-        
+        from sklearn.metrics import f1_score, balanced_accuracy_score
+
         module_logger.info(f"Finding optimal threshold for {metric}...")
         
         # Try different thresholds
@@ -500,8 +499,60 @@ class ImbalanceHandler:
             save_figure(fig, 'sampling_methods_comparison', 'imbalance')
         
         return comparison_df
-    
-    def create_stratified_folds(self, X: pd.DataFrame, y: pd.Series, 
+
+    def select_best_sampling_method(
+            self,
+            comparison_df: pd.DataFrame,
+            *,
+            prefer_over_retention: float = 0.15,
+            exclude_none: bool = True
+    ) -> str:
+        """
+        Choose the best sampling method from compare_sampling_methods() output.
+
+        Strategy (fast, no extra model training):
+        - Prefer methods that bring imbalance_ratio close to 1.0 (balanced).
+        - Tie-break by retaining samples (avoid heavy undersampling).
+        - If comparison_df has CV columns (cv_roc_auc_mean), use that as primary selector.
+        """
+        if comparison_df is None or comparison_df.empty:
+            return "smote_nc"
+
+        df = comparison_df.copy()
+
+        if exclude_none and "method" in df.columns:
+            df = df[df["method"] != "none"].copy()
+
+        if df.empty:
+            return "none"
+
+        # If you later choose to compute quick CV scores, prefer them.
+        if "cv_roc_auc_mean" in df.columns and df["cv_roc_auc_mean"].notna().any():
+            df = df.sort_values(["cv_roc_auc_mean", "total_samples"], ascending=[False, False])
+            return str(df.iloc[0]["method"])
+
+        # Otherwise: balance closeness + retention
+        # baseline totals (use 'none' row if present, else max total_samples)
+        if (comparison_df["method"] == "none").any():
+            baseline_total = float(comparison_df.loc[comparison_df["method"] == "none", "total_samples"].iloc[0])
+        else:
+            baseline_total = float(comparison_df["total_samples"].max())
+
+        # closeness to perfect balance (imbalance_ratio==1 is best)
+        df["balance_penalty"] = (df["imbalance_ratio"] - 1.0).abs()
+
+        # retention: keep as much data as possible
+        df["retention"] = df["total_samples"] / max(baseline_total, 1.0)
+
+        # score: minimise penalty, but slightly reward retention
+        # (prefer_over_retention controls how much retention matters)
+        df["score"] = -df["balance_penalty"] + prefer_over_retention * df["retention"]
+
+        df = df.sort_values(["score", "retention"], ascending=[False, False])
+
+        return str(df.iloc[0]["method"])
+
+    def create_stratified_folds(self, X: pd.DataFrame, y: pd.Series,
                               n_splits: int = CV_FOLDS) -> List[Tuple[np.ndarray, np.ndarray]]:
         """
         Create stratified cross-validation folds.
@@ -534,6 +585,31 @@ class ImbalanceHandler:
                              f"Val distribution: {val_dist.to_dict()}")
         
         return folds
+
+    def get_sampler(self, strategy: str | None, categorical_indices: list[int] | None = None):
+        """
+        Return an imbalanced-learn sampler instance for use inside an imblearn Pipeline.
+        """
+        if strategy is None or strategy == "none":
+            return None
+
+        if strategy == "smote":
+            return SMOTE(random_state=self.random_state)
+        if strategy == "borderline_smote":
+            return BorderlineSMOTE(random_state=self.random_state)
+        if strategy == "adasyn":
+            return ADASYN(random_state=self.random_state)
+        if strategy == "random_under":
+            return RandomUnderSampler(random_state=self.random_state)
+        if strategy == "smote_tomek":
+            return SMOTETomek(random_state=self.random_state)
+        if strategy == "smote_nc":
+            if not categorical_indices:
+                raise ValueError("categorical_indices must be provided for SMOTE-NC.")
+            return SMOTENC(categorical_features=categorical_indices, random_state=self.random_state)
+
+        raise ValueError(f"Unknown sampling strategy: {strategy}")
+
 
 def demonstrate_imbalance_handling(X: pd.DataFrame, y: pd.Series) -> Dict[str, Any]:
     """
@@ -568,6 +644,9 @@ def demonstrate_imbalance_handling(X: pd.DataFrame, y: pd.Series) -> Dict[str, A
     comparison = handler.compare_sampling_methods(
         X, y, categorical_indices=categorical_indices
     )
+
+    best_method = handler.select_best_sampling_method(comparison)
+    module_logger.info(f"Selected best sampling method: {best_method}")
     
     # Create stratified folds
     folds = handler.create_stratified_folds(X, y)
@@ -577,7 +656,8 @@ def demonstrate_imbalance_handling(X: pd.DataFrame, y: pd.Series) -> Dict[str, A
         'class_weights': class_weights,
         'sampling_comparison': comparison,
         'cv_folds': folds,
-        'handler': handler
+        'handler': handler,
+        'best_method': best_method
     }
     
     return results

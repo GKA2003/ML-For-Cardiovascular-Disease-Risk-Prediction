@@ -5,11 +5,9 @@ Implements training pipelines for all 9 models with hyperparameter tuning
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Tuple, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 import logging
-import time
 import warnings
-from datetime import datetime
 from pathlib import Path
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -19,15 +17,18 @@ warnings.filterwarnings('ignore')
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, VotingClassifier
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_validate, StratifiedKFold
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, StratifiedKFold
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     roc_auc_score, average_precision_score, matthews_corrcoef,
-    confusion_matrix, classification_report, roc_curve, precision_recall_curve
+    confusion_matrix, roc_curve, precision_recall_curve
 )
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.base import clone
+from sklearn.compose import ColumnTransformer
+from sklearn.calibration import CalibratedClassifierCV
+from imblearn.pipeline import Pipeline as ImbPipeline
 
 # Gradient boosting libraries
 import xgboost as xgb
@@ -38,15 +39,26 @@ import catboost as cb
 from interpret.glassbox import ExplainableBoostingClassifier
 
 from src.config import (
-    MODEL_CONFIGS, CV_FOLDS, RANDOM_SEED,
-    BASELINE_MODELS_DIR, TUNED_MODELS_DIR
+    CV_FOLDS, RANDOM_SEED,
+    BASELINE_MODELS_DIR, TUNED_MODELS_DIR,
+    PHASE6_MODELS, ADVANCED_MODEL_PARAM_SPACES,
+    TUNING_DEFAULT_SEARCH_TYPE, TUNING_N_ITER, TUNING_SCORING,
+    TUNING_N_JOBS, TUNING_VERBOSE,
+    CALIBRATION_ENABLED, CALIBRATION_METHOD, CALIBRATION_CV,
+    THRESHOLD_OPTIMISATION_ENABLED, THRESHOLD_PRIMARY_STRATEGY,
+    RUN_EBM_IN_PHASE6, TEST_SIZE
 )
-from src.utils import Timer, logger, save_model, get_memory_usage, save_figure
+
+from src.utils import Timer, save_model, get_memory_usage, save_figure
 from src.feature_engineering import FeatureScaler
 from src.class_imbalance import ImbalanceHandler
 
 # Get module logger
 module_logger = logging.getLogger(__name__)
+
+def to_numpy_array(X):
+    """Convert input to a numpy array. Top-level function so it is picklable."""
+    return np.asarray(X)
 
 class ModelTrainer:
     """
@@ -95,7 +107,6 @@ class ModelTrainer:
         elif model_name == 'xgboost':
             return xgb.XGBClassifier(
                 random_state=self.random_state,
-                use_label_encoder=False,
                 eval_metric='logloss',
                 **kwargs
             )
@@ -183,11 +194,11 @@ class ModelTrainer:
             
             # Perform threshold optimization for imbalanced data
             module_logger.info("Performing threshold optimization...")
-            threshold_results = self._optimize_classification_threshold(y_val, y_proba)
+            threshold_results = self._optimize_classification_threshold(y_val, y_proba, tag="baseline", subdir="baseline")
             
             # Calculate calibration metrics
             module_logger.info("Assessing model calibration...")
-            calibration_results = self._assess_model_calibration(y_val, y_proba)
+            calibration_results = self._assess_model_calibration(y_val, y_proba, tag="baseline", subdir="baseline")
             
             # Store results
             self.models['baseline_logistic'] = baseline_model
@@ -216,7 +227,7 @@ class ModelTrainer:
             'validation_metrics': val_metrics,
             'cv_metrics': {k: {'mean': float(np.mean(v)), 'std': float(np.std(v)), 'scores': [float(x) for x in v]} 
                           for k, v in cv_results.items()},
-            'threshold_optimization': threshold_results,
+            'threshold_optimisation': threshold_results,
             'calibration_assessment': calibration_results,
             'training_time': float(timer.elapsed),
             'memory_usage_mb': float(memory_mb),
@@ -245,7 +256,7 @@ class ModelTrainer:
             'model': baseline_model,
             'validation_metrics': val_metrics,
             'cv_metrics': cv_results,
-            'threshold_optimization': threshold_results,
+            'threshold_optimisation': threshold_results,
             'calibration_assessment': calibration_results,
             'training_time': float(timer.elapsed),
             'memory_usage_mb': float(memory_mb),
@@ -463,7 +474,7 @@ class ModelTrainer:
         module_logger.info(f"Generated {len(viz_paths)} baseline visualizations")
         return viz_paths
     
-    def _optimize_classification_threshold(self, y_true: np.ndarray, y_proba: np.ndarray) -> Dict[str, Any]:
+    def _optimize_classification_threshold(self, y_true: np.ndarray, y_proba: np.ndarray, tag, subdir) -> Dict[str, Any]:
         """
         Find optimal classification thresholds for different metrics.
         
@@ -474,8 +485,7 @@ class ModelTrainer:
         Returns:
             Dictionary with optimal thresholds and corresponding metrics
         """
-        from sklearn.metrics import precision_recall_curve
-        
+
         # Test different thresholds
         thresholds = np.linspace(0.01, 0.99, 99)
         
@@ -600,7 +610,7 @@ class ModelTrainer:
                 verticalalignment='top', fontfamily='monospace')
         
         plt.tight_layout()
-        viz_path = save_figure(fig, 'baseline_threshold_optimization', 'baseline')
+        viz_path = save_figure(fig, f'{tag}_threshold_optimisation', subdir)
         plt.close(fig)
         
         results['visualization_path'] = str(viz_path)
@@ -613,7 +623,7 @@ class ModelTrainer:
         
         return results
     
-    def _assess_model_calibration(self, y_true: np.ndarray, y_proba: np.ndarray) -> Dict[str, Any]:
+    def _assess_model_calibration(self, y_true: np.ndarray, y_proba: np.ndarray, tag, subdir) -> Dict[str, Any]:
         """
         Assess model calibration using reliability diagrams and Brier score.
         
@@ -666,7 +676,7 @@ class ModelTrainer:
         ax2.grid(True, alpha=0.3)
         
         plt.tight_layout()
-        viz_path = save_figure(fig, 'baseline_calibration_analysis', 'baseline')
+        viz_path = save_figure(fig, f'{tag}_calibration_analysis', subdir)
         plt.close(fig)
         
         results = {
@@ -1073,6 +1083,264 @@ class ModelTrainer:
         
         return pd.DataFrame(summary_data)
 
+    def _infer_categorical_columns(self, X: pd.DataFrame) -> list[str]:
+        # encoded originals + engineered discrete bins
+        engineered_discrete = {
+            "age_group", "bmi_category", "chol_category", "glucose_category",
+            "hypertension_stage", "hr_category", "smoking_intensity",
+        }
+        cat_cols = [c for c in X.columns if c.endswith("_encoded") or c in engineered_discrete]
+        return [c for c in cat_cols if c in X.columns]
+
+    def _build_phase6_pipeline(
+        self,
+        model_name: str,
+        X: pd.DataFrame,
+        class_weight: dict | None,
+        imbalance_strategy: str | None,
+    ) -> tuple[Any, dict]:
+        """
+        Returns:
+          (pipeline, pipeline_context) where context includes column lists and indices.
+        """
+        cat_cols = self._infer_categorical_columns(X)
+        num_cols = [c for c in X.columns if c not in cat_cols]
+
+        # Scale only continuous numeric columns for SVM/linear; tree/boosting = passthrough
+        scaling_needed = model_name in {"svm", "logistic_regression"}
+        num_transformer = StandardScaler() if scaling_needed else "passthrough"
+
+        to_numpy = FunctionTransformer(
+            to_numpy_array,
+            feature_names_out="one-to-one",
+        )
+
+        preprocess = ColumnTransformer(
+            transformers=[
+                ("num", num_transformer, num_cols),
+                ("cat", "passthrough", cat_cols),
+            ],
+            remainder="drop",
+            verbose_feature_names_out=False,
+        )
+
+        # After preprocess output: [num...][cat...] in that order
+        cat_indices_after = list(range(len(num_cols), len(num_cols) + len(cat_cols)))
+
+        sampler = None
+        if imbalance_strategy and imbalance_strategy != "none":
+            sampler = ImbalanceHandler(random_state=self.random_state).get_sampler(
+                imbalance_strategy,
+                categorical_indices=cat_indices_after if imbalance_strategy == "smote_nc" else None,
+            )
+
+        # class_weight handling (you already do this today)
+        model_params = {}
+        if class_weight and model_name in ["svm", "random_forest", "extra_trees"]:
+            model_params["class_weight"] = class_weight
+        elif class_weight and model_name == "xgboost":
+            model_params["scale_pos_weight"] = class_weight[1] / class_weight[0]
+        elif class_weight and model_name == "lightgbm":
+            model_params["class_weight"] = class_weight
+        elif class_weight and model_name == "catboost":
+            model_params["class_weights"] = class_weight
+
+        model = self.get_model(model_name, **model_params)  # existing method :contentReference[oaicite:18]{index=18}
+
+        steps = [("preprocess", preprocess), ("to_numpy", to_numpy)]
+        if sampler is not None:
+            steps.append(("sampler", sampler))
+        steps.append(("model", model))
+
+        pipe = ImbPipeline(steps=steps)
+        context = {"num_cols": num_cols, "cat_cols": cat_cols, "cat_indices_after": cat_indices_after}
+        return pipe, context
+
+    def train_and_tune_phase6(
+        self,
+        X_train: pd.DataFrame, y_train: pd.Series,
+        X_val: pd.DataFrame, y_val: pd.Series,
+        class_weight: dict | None,
+        imbalance_strategy: str | None = None,
+        search_type: str | None = None,
+        models_to_run: list[str] | None = None,
+    ) -> dict[str, Any]:
+
+        models_to_run = models_to_run or PHASE6_MODELS
+        search_type = search_type or TUNING_DEFAULT_SEARCH_TYPE
+        imbalance_strategy = imbalance_strategy or "none"
+
+        results_all = {}
+
+        cv = StratifiedKFold(n_splits=CV_FOLDS, shuffle=True, random_state=self.random_state)
+
+        for model_name in models_to_run:
+            module_logger.info(f"Phase 6: tuning {model_name}")
+
+            if model_name == "ebm" and not RUN_EBM_IN_PHASE6:
+                module_logger.info(
+                    "Skipping EBM in Phase 6 (RUN_EBM_IN_PHASE6=False). Use Phase 8 for interpretability.")
+                continue
+
+            pipe, ctx = self._build_phase6_pipeline(
+                model_name=model_name,
+                X=X_train,
+                class_weight=class_weight,
+                imbalance_strategy=imbalance_strategy,
+            )
+
+            param_space = ADVANCED_MODEL_PARAM_SPACES[model_name]
+
+            if search_type == "grid":
+                search = GridSearchCV(
+                    estimator=pipe,
+                    param_grid=param_space,
+                    scoring=TUNING_SCORING,
+                    cv=cv,
+                    n_jobs=TUNING_N_JOBS,
+                    verbose=TUNING_VERBOSE,
+                    refit=True,
+                )
+            else:
+                search = RandomizedSearchCV(
+                    estimator=pipe,
+                    param_distributions=param_space,
+                    n_iter=TUNING_N_ITER,
+                    scoring=TUNING_SCORING,
+                    cv=cv,
+                    n_jobs=TUNING_N_JOBS,
+                    verbose=TUNING_VERBOSE,
+                    random_state=self.random_state,
+                    refit=True,
+                )
+
+            with Timer(f"{model_name} phase6 tuning") as timer:
+                search.fit(X_train, y_train)
+
+            best_pipe = search.best_estimator_
+            y_proba = best_pipe.predict_proba(X_val)[:, 1]
+            y_pred = (y_proba >= 0.5).astype(int)
+            metrics_default = self.calculate_metrics(y_val, y_pred, y_proba)
+
+            subdir = f"tuned/{model_name}"
+            model_dir = Path(TUNED_MODELS_DIR) / model_name
+            model_dir.mkdir(parents=True, exist_ok=True)
+
+            threshold_pack = None
+            chosen_threshold = 0.5
+            if THRESHOLD_OPTIMISATION_ENABLED:
+                threshold_pack = self._optimize_classification_threshold(
+                    y_val.values if hasattr(y_val, "values") else y_val,
+                    y_proba,
+                    tag=f"{model_name}_tuned",
+                    subdir=subdir,
+                )
+                chosen_threshold = threshold_pack[f"{THRESHOLD_PRIMARY_STRATEGY}_optimization"]["threshold"]
+                y_pred_opt = (y_proba >= chosen_threshold).astype(int)
+                metrics_opt = self.calculate_metrics(y_val, y_pred_opt, y_proba)
+            else:
+                metrics_opt = None
+
+            calibration_pack = None
+            calibrated_model = None
+            threshold_pack_calibrated = None
+            chosen_threshold_calibrated = 0.5
+            metrics_default_calibrated = None
+            metrics_opt_calibrated = None
+
+            if CALIBRATION_ENABLED:
+                # Calibrate using training only (no leakage from held-out val)
+                calibrator = CalibratedClassifierCV(
+                    estimator=best_pipe,
+                    method=CALIBRATION_METHOD,
+                    cv=CALIBRATION_CV,
+                )
+                calibrator.fit(X_train, y_train)
+                calibrated_model = calibrator
+
+                y_proba_cal = calibrated_model.predict_proba(X_val)[:, 1]
+
+                # Default (0.5) metrics for calibrated probabilities
+                y_pred_cal_default = (y_proba_cal >= 0.5).astype(int)
+                metrics_default_calibrated = self.calculate_metrics(y_val, y_pred_cal_default, y_proba_cal)
+
+                # Threshold optimisation on calibrated probabilities (separate from uncalibrated)
+                if THRESHOLD_OPTIMISATION_ENABLED:
+                    threshold_pack_calibrated = self._optimize_classification_threshold(
+                        y_val.values if hasattr(y_val, "values") else y_val,
+                        y_proba_cal,
+                        tag=f"{model_name}_tuned_calibrated",
+                        subdir=subdir,
+                    )
+                    chosen_threshold_calibrated = threshold_pack_calibrated[
+                        f"{THRESHOLD_PRIMARY_STRATEGY}_optimization"
+                    ]["threshold"]
+                    y_pred_cal_opt = (y_proba_cal >= chosen_threshold_calibrated).astype(int)
+                    metrics_opt_calibrated = self.calculate_metrics(y_val, y_pred_cal_opt, y_proba_cal)
+
+                calibration_pack = self._assess_model_calibration(
+                    y_val.values if hasattr(y_val, "values") else y_val,
+                    y_proba_cal,
+                    tag=f"{model_name}_tuned_calibrated",
+                    subdir=subdir,
+                )
+
+            # Save models + metadata
+            base_metadata = {
+                "phase": 6,
+                "model_type": model_name,
+                "imbalance_strategy": imbalance_strategy,
+                "best_params": search.best_params_,
+                "best_cv_score": float(search.best_score_),
+                "cv_folds": CV_FOLDS,
+                "training_time_sec": float(timer.elapsed),
+            }
+
+            # --- Uncalibrated tuned artifact ---
+            metadata_uncal = {
+                **base_metadata,
+                "variant": "tuned",
+                "calibrated": False,
+                "metrics_default_threshold_0.5": metrics_default,
+                "threshold_optimisation": threshold_pack,
+                "chosen_threshold": float(chosen_threshold),
+                "metrics_at_chosen_threshold": metrics_opt,
+            }
+
+            model_path = save_model(best_pipe, f"{model_name}_tuned", model_dir, metadata_uncal)
+
+            # --- Calibrated tuned artifact ---
+            calibrated_path = None
+            metadata_cal = None
+            if calibrated_model is not None:
+                metadata_cal = {
+                    **base_metadata,
+                    "variant": "tuned_calibrated",
+                    "calibrated": True,
+
+                    # calibrated-specific threshold info
+                    "metrics_default_threshold_0.5_calibrated": metrics_default_calibrated,
+                    "threshold_optimisation_calibrated": threshold_pack_calibrated,
+                    "chosen_threshold_calibrated": float(chosen_threshold_calibrated),
+                    "metrics_at_chosen_threshold_calibrated": metrics_opt_calibrated,
+
+                    # keep calibration assessment
+                    "calibration_assessment": calibration_pack,
+                }
+
+                calibrated_path = save_model(
+                    calibrated_model, f"{model_name}_tuned_calibrated", model_dir, metadata_cal
+                )
+
+            results_all[model_name] = {
+                "model_path": str(model_path),
+                "calibrated_model_path": str(calibrated_path) if calibrated_path else None,
+                "metadata_uncalibrated": metadata_uncal,
+                "metadata_calibrated": metadata_cal,
+            }
+
+        return results_all
+
 
 if __name__ == "__main__":
     # Test the model training pipeline
@@ -1099,7 +1367,7 @@ if __name__ == "__main__":
     
     # Create train-validation split
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y
+        X, y, test_size=TEST_SIZE, random_state=RANDOM_SEED, stratify=y
     )
     
     # Calculate class weights

@@ -5,19 +5,15 @@ Creates new features and transforms existing ones to improve model performance
 
 import numpy as np
 import pandas as pd
-from typing import Tuple, List, Dict, Optional, Union
+from typing import Tuple, List, Dict, Optional
 import logging
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder
 
 from src.config import (
-    AGE_BINS, AGE_LABELS, RANDOM_SEED,
-    PROCESSED_DATA_DIR
+    AGE_BINS, AGE_LABELS, PROCESSED_DATA_DIR
 )
-from src.utils import Timer, logger, validate_dataframe
+from src.utils import Timer
 
 # Get module logger
 module_logger = logging.getLogger(__name__)
@@ -542,7 +538,7 @@ if __name__ == "__main__":
     module_logger.info("Testing feature engineering pipeline...")
     
     # Load processed data
-    from data_preprocessing import quick_preprocess
+    from src.data_preprocessing import quick_preprocess
     train_df, test_df, preprocessor = quick_preprocess()
     
     # Apply feature engineering

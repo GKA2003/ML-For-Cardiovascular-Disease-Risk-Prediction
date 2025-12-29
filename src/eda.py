@@ -7,16 +7,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, Any
 import logging
 from scipy import stats
-from pathlib import Path
 
 from src.config import (
-    FIGURES_DIR, TABLES_DIR, TARGET_COLUMN,
-    FIGURE_SIZE, COLOUR_PALETTE
+    TABLES_DIR, TARGET_COLUMN
 )
-from src.utils import save_figure, Timer, logger
+from src.utils import save_figure, Timer
 from src.data_preprocessing import DataPreprocessor
 
 # Get module logger
@@ -652,7 +650,7 @@ class ExploratoryDataAnalyzer:
         
         report_path = TABLES_DIR / f"eda_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.txt"
         
-        with open(report_path, 'w') as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write("="*80 + "\n")
             f.write("EXPLORATORY DATA ANALYSIS REPORT\n")
             f.write("Heart Disease Prediction Dataset\n")
@@ -713,7 +711,7 @@ if __name__ == "__main__":
     module_logger.info("Testing EDA pipeline...")
     
     # First run preprocessing
-    from data_preprocessing import quick_preprocess
+    from src.data_preprocessing import quick_preprocess
     train_df, test_df, preprocessor = quick_preprocess()
     
     # Create EDA analyzer

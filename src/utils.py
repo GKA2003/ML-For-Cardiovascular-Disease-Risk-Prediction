@@ -17,14 +17,37 @@ import seaborn as sns
 from pathlib import Path
 
 from src.config import (
-    RANDOM_SEED, FIGURES_DIR, TABLES_DIR, 
+    RANDOM_SEED, FIGURES_DIR, TABLES_DIR,
     FIGURE_SIZE, STYLE, DPI, MODEL_FORMAT,
-    LOG_LEVEL, LOG_FORMAT
+    COLOUR_PALETTE
 )
 
-# Set up logging
-logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
+_UTILS_INITIALISED = False
 logger = logging.getLogger(__name__)
+
+for name in [
+    "interpret",
+    "interpret.utils",
+    "interpret.utils._native",
+    "interpret.glassbox",
+    "interpret.glassbox._ebm",
+    "interpret.glassbox._ebm._boost",
+]:
+    logging.getLogger(name).setLevel(logging.WARNING)
+
+def initialise_utilities(seed: int = 42) -> None:
+    """
+    Initialise global utilities once (seeds + plotting style).
+    Call this from main(), not at import-time.
+    """
+    global _UTILS_INITIALISED
+    if _UTILS_INITIALISED:
+        return
+
+    set_random_seeds(seed)
+    set_plot_style()
+    logger.info("Utilities initialised successfully")
+    _UTILS_INITIALISED = True
 
 # Set random seeds for reproducibility
 def set_random_seeds(seed: int = RANDOM_SEED) -> None:
@@ -48,7 +71,7 @@ def set_random_seeds(seed: int = RANDOM_SEED) -> None:
 def set_plot_style() -> None:
     """Set consistent plotting style for all visualisations."""
     plt.style.use(STYLE)
-    sns.set_palette("husl")
+    sns.set_palette(COLOUR_PALETTE)
     plt.rcParams['figure.figsize'] = FIGURE_SIZE
     plt.rcParams['figure.dpi'] = DPI
     plt.rcParams['savefig.dpi'] = DPI
@@ -164,7 +187,7 @@ def save_model(model: Any, model_name: str, directory: Path,
         metadata_path = directory / f"{filename}_metadata.json"
         
         try:
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w", encoding="utf-8") as f:
                 json.dump(metadata_serializable, f, indent=2, default=str)
             logger.info(f"Metadata saved to {metadata_path}")
         except Exception as e:
@@ -212,7 +235,7 @@ def load_model_metadata(metadata_path: Union[str, Path]) -> Dict[str, Any]:
     if not metadata_path.exists():
         raise FileNotFoundError(f"Metadata not found: {metadata_path}")
     
-    with open(metadata_path, 'r') as f:
+    with open(metadata_path, "r", encoding="utf-8") as f:
         metadata = json.load(f)
     
     logger.info(f"Metadata loaded from {metadata_path}")
@@ -492,9 +515,3 @@ def print_model_summary(model_name: str, metrics: Dict[str, float],
             print(f"{feat:>30s}: {coef:>10.4f}")
     
     print(f"\n{'='*60}")
-
-# Initialise utilities
-set_random_seeds()
-set_plot_style()
-
-logger.info("Utilities module loaded successfully")

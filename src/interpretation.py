@@ -7,7 +7,6 @@ import pandas as pd
 import shap
 import matplotlib.pyplot as plt
 from interpret.glassbox import ExplainableBoostingClassifier
-from src.config import FIGURES_DIR
 from src.utils import save_figure
 
 def generate_shap_summary(model, X: pd.DataFrame, model_type: str = 'tree'):
