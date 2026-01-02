@@ -10,6 +10,7 @@ import sys
 import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
+import os
 
 # import updated config vals
 from src.config import (
@@ -25,6 +26,12 @@ from src.feature_engineering import create_feature_engineering_pipeline
 from src.class_imbalance import demonstrate_imbalance_handling
 from src.model_training import ModelTrainer
 from sklearn.model_selection import train_test_split
+from pathlib import Path
+
+
+# Stabilize joblib temp handling on Windows to reduce loky resource_tracker warnings
+os.environ.setdefault("JOBLIB_TEMP_FOLDER", str(Path("reports") / "_joblib_tmp"))
+Path(os.environ["JOBLIB_TEMP_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
 def configure_logging() -> None:
     # Ensure Unicode-safe logging on Windows terminals (cp1252 cannot encode ≥, etc.)
@@ -512,6 +519,292 @@ def run_phase_7_model_evaluation(X_test, y_test, baseline_results=None, tuned_re
 
     return results
 
+def run_phase_8_model_interpretation(train_engineered: pd.DataFrame, baseline_results=None, tuned_results=None):
+    """Phase 8: Feature importance + model interpretation (starting deliverables)."""
+    logger.info("\n" + "="*60)
+    logger.info("PHASE 8: FEATURE IMPORTANCE + MODEL INTERPRETATION")
+    logger.info("="*60)
+
+    from src.config import (
+        PHASE8_FINAL_MODEL_SET, PHASE8_PRIMARY_MODEL,
+        PHASE8_PERM_N_REPEATS, PHASE8_PERM_TOP_N,
+        PHASE8_DEPENDENCE_TOP_K, PHASE8_MAX_INTERACTION_PLOTS,
+        PHASE8_PDP_ICE_ENABLED, PHASE8_PDP_ICE_TOP_K,
+        PHASE8_SUBGROUP_MIN, PHASE8_BOOTSTRAP,
+        PHASE8_STABILITY_TOP_K, PHASE8_CATBOOST_EXPLAIN,
+        PHASE8_CROSSMODEL_TOP_K, PHASE8_SHAP_BACKGROUND_SIZE,
+        PHASE7_EXPECTED_TEST_SIZE, PHASE8_ALL_ZERO_ALLOWLIST,
+        PHASE8_SUMMARY_TOP_N, TARGET_COLUMN,
+    )
+    from src.evaluation import Phase7Config, load_models_for_phase7
+    from src.interpretation import (
+        create_phase8_header_table, generate_phase8_shap_global_for_primary,
+        generate_phase8_permutation_importance_brier,
+        create_phase8_shap_perm_overlap_table,
+        generate_phase8_shap_dependence_plots,
+        generate_phase8_pdp_ice,
+        generate_phase8_local_explanations,
+        generate_phase8_risk_deciles,
+        plot_phase8_reliability_with_counts,
+        select_phase8_local_cases,
+        generate_phase8_error_analysis_by_group,
+        bootstrap_phase8_shap_rank_stability,
+        compute_phase8_tree_shap_mean_abs_light,
+        compute_phase8_logistic_standardized_coeffs,
+        create_phase8_cross_model_top10_comparison,
+        phase8_guardrail_check, generate_phase8_what_we_learned_summary,
+        update_phase8_model_card_and_chapter,
+    )
+    # Use same split logic/seed as Phase 5–7 so we explain the same test cohort (~678 rows)
+    X_train, X_val, X_test, y_train, y_val, y_test = make_train_val_test_split(train_engineered)
+
+    phase8_guardrail_check(
+        train_engineered=train_engineered,
+        X_test=X_test,
+        y_test=y_test,
+        expected_test_size=PHASE7_EXPECTED_TEST_SIZE,
+        target_col=TARGET_COLUMN,
+        all_zero_allowlist=PHASE8_ALL_ZERO_ALLOWLIST,
+    )
+
+    # Load models (auto-discovers from disk if results not provided)
+    cfg = Phase7Config(
+        bootstrap=False,
+        pairwise_tests=False,
+        plot_roc=False,
+        plot_pr=False,
+        plot_calibration=False,
+        plot_decision_curves=False,
+    )
+    models, thresholds, metadata_map, path_map = load_models_for_phase7(
+        baseline_results=baseline_results,
+        tuned_results=tuned_results,
+        include_calibrated=True,
+        include_uncalibrated=True,
+        config=cfg,
+    )
+
+    # Lock final Phase 8 model set
+    final_models = {k: v for k, v in models.items() if k in PHASE8_FINAL_MODEL_SET}
+    missing = [m for m in PHASE8_FINAL_MODEL_SET if m not in final_models]
+    if missing:
+        raise RuntimeError(
+            "Phase 8 requires these models to be available (train Phase 5/6 first): "
+            + ", ".join(missing)
+        )
+
+    #Header table anchored to Phase 7 metrics CSV
+    header_path = create_phase8_header_table(final_models=PHASE8_FINAL_MODEL_SET)
+
+    #SHAP global explanations for primary model
+    shap_result = generate_phase8_shap_global_for_primary(
+        model=final_models[PHASE8_PRIMARY_MODEL],
+        X_train=X_train,
+        X_test=X_test,
+        model_name=PHASE8_PRIMARY_MODEL,
+    )
+
+    #Permutation importance sanity check (Brier)
+    perm_df, perm_csv_path, perm_bar_path = generate_phase8_permutation_importance_brier(
+        model=final_models[PHASE8_PRIMARY_MODEL],
+        X_test=X_test,
+        y_test=y_test,
+        model_name=PHASE8_PRIMARY_MODEL,
+        n_repeats=PHASE8_PERM_N_REPEATS,
+        top_n=PHASE8_PERM_TOP_N,
+    )
+
+    overlap_csv_path = create_phase8_shap_perm_overlap_table(
+        shap_mean_abs_csv=shap_result.mean_abs_csv_path,
+        perm_importance_df=perm_df,
+        model_name=PHASE8_PRIMARY_MODEL,
+        top_n=PHASE8_PERM_TOP_N,
+    )
+
+    #SHAP dependence plots for top 6–8 features
+    dependence_paths = generate_phase8_shap_dependence_plots(
+        shap_values=shap_result.shap_values,
+        X_test_transformed=shap_result.X_test_transformed,
+        shap_mean_abs_csv=shap_result.mean_abs_csv_path,
+        model_name=PHASE8_PRIMARY_MODEL,
+        top_k=PHASE8_DEPENDENCE_TOP_K,
+        max_interaction_plots=PHASE8_MAX_INTERACTION_PLOTS,
+    )
+
+    #PDP/ICE (disabled by default)
+    pdp_ice_paths = []
+    if PHASE8_PDP_ICE_ENABLED:
+        shap_rank_df = pd.read_csv(shap_result.mean_abs_csv_path)
+        pdp_feats = shap_rank_df["feature"].head(PHASE8_PDP_ICE_TOP_K).tolist()
+        pdp_ice_paths = generate_phase8_pdp_ice(
+            model=final_models[PHASE8_PRIMARY_MODEL],
+            X_test=X_test,
+            features=pdp_feats,
+            model_name=PHASE8_PRIMARY_MODEL,
+        )
+
+    #Calibration and risk stratification interpretation
+    #Using calibrated model probabilities (primary model pipeline)
+    y_test_proba = final_models[PHASE8_PRIMARY_MODEL].predict_proba(X_test)[:, 1]
+
+    risk_deciles_csv, risk_deciles_plot = generate_phase8_risk_deciles(
+        y_true=y_test,
+        y_proba=y_test_proba,
+        model_name=PHASE8_PRIMARY_MODEL,
+    )
+
+    reliability_bins_csv, reliability_plot = plot_phase8_reliability_with_counts(
+        y_true=y_test,
+        y_proba=y_test_proba,
+        model_name=PHASE8_PRIMARY_MODEL,
+    )
+
+    #Local explanations & case studies
+    #Prefer the Phase 7 chosen threshold if available
+    primary_threshold = None
+    if isinstance(thresholds, dict) and PHASE8_PRIMARY_MODEL in thresholds:
+        try:
+            primary_threshold = float(thresholds[PHASE8_PRIMARY_MODEL])
+        except Exception:
+            primary_threshold = None
+
+    cases_df = select_phase8_local_cases(
+        X_test=X_test,
+        y_proba=y_test_proba,
+        model_threshold=primary_threshold,
+        model_name=PHASE8_PRIMARY_MODEL,
+    )
+
+    local_summary_csv, local_figs, local_notes = generate_phase8_local_explanations(
+        model_name=PHASE8_PRIMARY_MODEL,
+        cases_df=cases_df,
+        X_test=X_test,
+        shap_values=shap_result.shap_values,
+        X_test_transformed=shap_result.X_test_transformed,
+        feature_names=shap_result.feature_names,
+        expected_value=shap_result.expected_value,
+    )
+
+    #Error analysis by subgroup (Brier, AP, calibration slope/intercept)
+    err_csv, err_plot = generate_phase8_error_analysis_by_group(
+        X_test=X_test,
+        y_true=y_test,
+        y_proba=y_test_proba,
+        model_name=PHASE8_PRIMARY_MODEL,
+        min_n=PHASE8_SUBGROUP_MIN,
+    )
+
+    #Explanation stability (cheap): bootstrap SHAP ranks 5 times
+    stab_top10_csv, stab_corr_csv = bootstrap_phase8_shap_rank_stability(
+        shap_values=shap_result.shap_values,
+        feature_names=shap_result.feature_names,
+        model_name=PHASE8_PRIMARY_MODEL,
+        n_boot=PHASE8_BOOTSTRAP,
+        top_k=PHASE8_STABILITY_TOP_K,
+    )
+
+    #Cross-model explanation agreement
+    #CatBoost SHAP (light: explain 400 test rows)
+    cb_shap_csv, cb_shap_bar = compute_phase8_tree_shap_mean_abs_light(
+        model=final_models["catboost_tuned_calibrated"],
+        X_train=X_train,
+        X_test=X_test,
+        model_name="catboost_tuned_calibrated",
+        explain_n=PHASE8_CATBOOST_EXPLAIN,
+        background_n=PHASE8_SHAP_BACKGROUND_SIZE,
+    )
+
+    #Logistic standardized coefficients/odds ratios
+    log_coef_csv = compute_phase8_logistic_standardized_coeffs(
+        model=final_models["baseline_logistic"],
+        X_train=X_train,
+        model_name="baseline_logistic",
+    )
+
+    #Single comparison table + overlap counts
+    cross_model_csv = create_phase8_cross_model_top10_comparison(
+        extra_trees_shap_csv=Path(shap_result.mean_abs_csv_path),
+        catboost_shap_csv=Path(cb_shap_csv),
+        logistic_coef_csv=Path(log_coef_csv),
+    )
+
+    # --- Phase 8 synthesis outputs ---
+    what_we_learned_csv = generate_phase8_what_we_learned_summary(
+        model_name=PHASE8_PRIMARY_MODEL,
+        shap_mean_abs_csv=Path(shap_result.mean_abs_csv_path),
+        shap_values=shap_result.shap_values,
+        X_test_transformed=shap_result.X_test_transformed,
+        top_n=PHASE8_SUMMARY_TOP_N,
+    )
+
+    artifacts = {
+        "header_table_path": str(header_path),
+        "shap_fig_beeswarm": str(shap_result.beeswarm_path),
+        "shap_fig_bar": str(shap_result.bar_path),
+        "shap_mean_abs_csv": str(shap_result.mean_abs_csv_path),
+        "perm_csv": str(perm_csv_path),
+        "perm_bar": str(perm_bar_path),
+        "overlap_csv": str(overlap_csv_path),
+        "dependence_plot_count": len(dependence_paths),
+        "risk_deciles_csv": str(risk_deciles_csv),
+        "risk_deciles_plot": str(risk_deciles_plot),
+        "reliability_bins_csv": str(reliability_bins_csv),
+        "reliability_plot": str(reliability_plot),
+        "local_cases_csv": str(local_summary_csv),
+        "subgroup_csv": str(err_csv),
+        "subgroup_plot": str(err_plot),
+        "stability_freq_csv": str(stab_top10_csv),
+        "stability_corr_csv": str(stab_corr_csv),
+        "catboost_shap_csv": str(cb_shap_csv),
+        "logistic_coef_csv": str(log_coef_csv),
+        "cross_model_csv": str(cross_model_csv),
+        "what_we_learned_csv": str(what_we_learned_csv),
+    }
+
+    model_card_path, chapter_path = update_phase8_model_card_and_chapter(
+        model_name=PHASE8_PRIMARY_MODEL,
+        artifacts=artifacts,
+    )
+
+    logger.info("\nPhase 8 outputs:" + "="*10)
+    logger.info(f"  Header table: {header_path}")
+    logger.info(f"  SHAP beeswarm: {shap_result.beeswarm_path}")
+    logger.info(f"  SHAP bar: {shap_result.bar_path}")
+    logger.info(f"  mean(|SHAP|) table: {shap_result.mean_abs_csv_path}")
+    logger.info(f"  Permutation CSV: {perm_csv_path}")
+    logger.info(f"  Permutation bar: {perm_bar_path}")
+    logger.info(f"  SHAP-Perm overlap table: {overlap_csv_path}")
+    logger.info(f"  Dependence plots: {len(dependence_paths)} files")
+    if pdp_ice_paths:
+        logger.info(f"  PDP/ICE plots: {len(pdp_ice_paths)} files")
+    logger.info(f"  Risk deciles table: {risk_deciles_csv}")
+    logger.info(f"  Risk deciles plot: {risk_deciles_plot}")
+    logger.info(f"  Reliability bins: {reliability_bins_csv}")
+    logger.info(f"  Reliability plot: {reliability_plot}")
+    logger.info(f"  Local cases summary: {local_summary_csv}")
+    logger.info(f"  Local waterfall plots: {len(local_figs)}")
+    logger.info(f"  Local case notes (md): {len(local_notes)}")
+    logger.info(f"  Error analysis CSV: {err_csv}")
+    logger.info(f"  Error analysis plot: {err_plot}")
+    logger.info(f"  SHAP stability top10 freq: {stab_top10_csv}")
+    logger.info(f"  SHAP stability rank corr: {stab_corr_csv}")
+    logger.info(f"  CatBoost SHAP mean_abs: {cb_shap_csv}")
+    logger.info(f"  Logistic coeffs: {log_coef_csv}")
+    logger.info(f"  Cross-model top10 comparison: {cross_model_csv}")
+    logger.info(f"  What-we-learned summary: {what_we_learned_csv}")
+    logger.info(f"  Updated model card: {model_card_path}")
+    logger.info(f"  Interpretation chapter: {chapter_path}")
+
+    return {
+        "header_table_path": str(header_path),
+        "shap": {
+            "model_name": shap_result.model_name,
+            "beeswarm_path": str(shap_result.beeswarm_path),
+            "bar_path": str(shap_result.bar_path),
+            "mean_abs_csv_path": str(shap_result.mean_abs_csv_path),
+        },
+    }
+
 def main():
     """Main entry point for the pipeline."""
     parser = argparse.ArgumentParser(description='Heart Disease ML Pipeline')
@@ -626,9 +919,20 @@ def main():
                 tuned_results=tuned_results,
             )
 
-        if args.phase not in ['1-2', '3-4', '5', '6', '7', 'all']:
+        if args.phase in ['8', 'all']:
+            if train_engineered is None:
+                logger.info("Loading engineered data from Phase 3-4...")
+                train_engineered = pd.read_csv(PROCESSED_DATA_DIR / "train_engineered.csv")
+
+            phase8_results = run_phase_8_model_interpretation(
+                train_engineered=train_engineered,
+                baseline_results=baseline_results,
+                tuned_results=tuned_results
+            )
+
+        if args.phase not in ['1-2', '3-4', '5', '6', '7', '8', 'all']:
             logger.error(f"Unknown phase: {args.phase}")
-            logger.info("Valid options: '1-2', '3-4', '5', '6', 'all'")
+            logger.info("Valid options: '1-2', '3-4', '5', '6', '7', '8', 'all'")
         
     except Exception as e:
         logger.error(f"Pipeline failed with error: {str(e)}", exc_info=True)

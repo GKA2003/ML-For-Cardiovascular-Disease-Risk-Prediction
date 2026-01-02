@@ -1,0 +1,748 @@
+2025-12-31 19:32:09,830 - src.utils - INFO - Random seeds set to 42
+2025-12-31 19:32:09,830 - src.utils - INFO - Plot style configured
+2025-12-31 19:32:09,830 - src.utils - INFO - Utilities initialised successfully
+2025-12-31 19:32:09,846 - src.utils - INFO - ================================================================================
+2025-12-31 19:32:09,846 - src.utils - INFO - HEART DISEASE PREDICTION ML PIPELINE
+2025-12-31 19:32:09,846 - src.utils - INFO - Phase 1: Environment Setup & Data Loading
+2025-12-31 19:32:09,846 - src.utils - INFO - Phase 2: Comprehensive EDA
+2025-12-31 19:32:09,846 - src.utils - INFO - ================================================================================
+2025-12-31 19:32:09,846 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:09,846 - src.utils - INFO - PHASE 1: DATA LOADING AND INITIAL PROCESSING
+2025-12-31 19:32:09,846 - src.utils - INFO - ============================================================
+2025-12-31 19:32:09,846 - src.utils - INFO - Phase 1 started
+2025-12-31 19:32:09,846 - src.utils - INFO - Data loading started
+2025-12-31 19:32:09,862 - src.utils - INFO - Loaded data from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\data\raw\train.csv: shape (3390, 17)
+2025-12-31 19:32:09,862 - src.utils - INFO - Loaded data from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\data\raw\test.csv: shape (848, 16)
+2025-12-31 19:32:09,862 - src.data_preprocessing - INFO - Train data shape: (3390, 17)
+2025-12-31 19:32:09,862 - src.data_preprocessing - INFO - Test data shape: (848, 16)
+2025-12-31 19:32:09,862 - src.data_preprocessing - INFO - Dropped 'id' column from train data (identifier not used as a feature)
+2025-12-31 19:32:09,862 - src.data_preprocessing - INFO - Dropped 'id' column from test data (identifier not used as a feature)
+2025-12-31 19:32:09,862 - src.utils - INFO - Test data validated: shape (848, 15)
+2025-12-31 19:32:09,862 - src.utils - INFO - Data loading completed in 0.02 seconds
+2025-12-31 19:32:09,862 - src.data_preprocessing - INFO - Analysing data quality...
+2025-12-31 19:32:09,877 - src.data_preprocessing - INFO - Categorical features (5): ['education', 'sex', 'is_smoking', 'cigsPerDay', 'prevalentStroke']
+2025-12-31 19:32:09,877 - src.data_preprocessing - INFO - Numerical features (10): ['age', 'BPMeds', 'prevalentHyp', 'diabetes', 'totChol', 'sysBP', 'diaBP', 'BMI', 'heartRate', 'glucose']
+2025-12-31 19:32:09,934 - src.data_preprocessing - INFO - Class imbalance ratio: 5.63
+2025-12-31 19:32:09,934 - src.utils - INFO - 
+DATA QUALITY SUMMARY:
+2025-12-31 19:32:09,934 - src.utils - INFO - ----------------------------------------
+2025-12-31 19:32:09,934 - src.utils - INFO - 
+Missing values in training data:
+2025-12-31 19:32:09,940 - src.utils - INFO -                 column  missing_count  missing_percentage
+education    education             87            2.566372
+cigsPerDay  cigsPerDay             22            0.648968
+BPMeds          BPMeds             44            1.297935
+totChol        totChol             38            1.120944
+BMI                BMI             14            0.412979
+heartRate    heartRate              1            0.029499
+glucose        glucose            304            8.967552
+2025-12-31 19:32:09,940 - src.utils - INFO - 
+Missing values in test data:
+2025-12-31 19:32:09,941 - src.utils - INFO -                 column  missing_count  missing_percentage
+education    education             18            2.122642
+cigsPerDay  cigsPerDay              7            0.825472
+BPMeds          BPMeds              9            1.061321
+totChol        totChol             12            1.415094
+BMI                BMI              5            0.589623
+glucose        glucose             84            9.905660
+2025-12-31 19:32:09,941 - src.utils - INFO - 
+Target variable distribution:
+2025-12-31 19:32:09,941 - src.utils - INFO -             count  percentage
+TenYearCHD                   
+0            2879   84.926254
+1             511   15.073746
+2025-12-31 19:32:09,946 - src.utils - INFO - 
+Class imbalance ratio: 5.63
+2025-12-31 19:32:09,946 - src.utils - INFO - 
+Feature types identified:
+2025-12-31 19:32:09,946 - src.utils - INFO - Numerical features (10): ['age', 'BPMeds', 'prevalentHyp', 'diabetes', 'totChol', 'sysBP', 'diaBP', 'BMI', 'heartRate', 'glucose']
+2025-12-31 19:32:09,947 - src.utils - INFO - Categorical features (5): ['education', 'sex', 'is_smoking', 'cigsPerDay', 'prevalentStroke']
+2025-12-31 19:32:09,947 - src.utils - INFO - 
+Handling missing values...
+2025-12-31 19:32:09,947 - src.data_preprocessing - INFO - Handling missing values with strategy: median
+2025-12-31 19:32:09,951 - src.data_preprocessing - INFO - Categorical features (5): ['education', 'sex', 'is_smoking', 'cigsPerDay', 'prevalentStroke']
+2025-12-31 19:32:09,951 - src.data_preprocessing - INFO - Numerical features (10): ['age', 'BPMeds', 'prevalentHyp', 'diabetes', 'totChol', 'sysBP', 'diaBP', 'BMI', 'heartRate', 'glucose']
+2025-12-31 19:32:09,989 - src.data_preprocessing - INFO - Applying outlier capping and distribution transformations
+2025-12-31 19:32:10,036 - src.data_preprocessing - INFO - Applied log transformation to skewed features: ['prevalentHyp']
+2025-12-31 19:32:10,036 - src.data_preprocessing - INFO - Binning high-cardinality feature: cigsPerDay
+2025-12-31 19:32:10,064 - src.data_preprocessing - INFO - Train data shape after imputation: (3390, 16)
+2025-12-31 19:32:10,064 - src.data_preprocessing - INFO - Test data shape after imputation: (848, 15)
+2025-12-31 19:32:10,115 - src.data_preprocessing - INFO - Processed data saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\data\processed
+2025-12-31 19:32:10,115 - src.utils - INFO - Phase 1 completed in 0.27 seconds
+2025-12-31 19:32:10,115 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:10,115 - src.utils - INFO - PHASE 2: COMPREHENSIVE EXPLORATORY DATA ANALYSIS
+2025-12-31 19:32:10,115 - src.utils - INFO - ============================================================
+2025-12-31 19:32:10,115 - src.utils - INFO - Phase 2 started
+2025-12-31 19:32:10,115 - src.eda - INFO - Starting comprehensive EDA...
+2025-12-31 19:32:10,115 - src.utils - INFO - Complete EDA started
+2025-12-31 19:32:10,115 - src.eda - INFO - Computing basic statistics...
+2025-12-31 19:32:10,212 - src.eda - INFO - Analysing missing value patterns...
+2025-12-31 19:32:10,753 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\missing_values_heatmap_20251231_193210.png
+2025-12-31 19:32:10,754 - src.eda - INFO - Analysing target variable...
+2025-12-31 19:32:11,226 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\target_distribution_20251231_193210.png
+2025-12-31 19:32:11,226 - src.eda - INFO - Class imbalance ratio: 5.63
+2025-12-31 19:32:11,226 - src.eda - INFO - Analysing feature distributions...
+2025-12-31 19:32:11,771 - src.eda - WARNING - Skipping KDE for 'BPMeds' – only 1 unique value(s).
+2025-12-31 19:32:12,428 - src.eda - WARNING - Skipping KDE for 'diabetes' – only 1 unique value(s).
+2025-12-31 19:32:19,240 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\numerical_distributions_20251231_193216.png
+2025-12-31 19:32:20,659 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\categorical_distributions_20251231_193219.png
+2025-12-31 19:32:20,659 - src.eda - INFO - Analysing correlations...
+2025-12-31 19:32:21,490 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\correlation_heatmap_20251231_193220.png
+2025-12-31 19:32:21,490 - src.eda - WARNING - Found 2 highly correlated feature pairs
+2025-12-31 19:32:21,490 - src.eda - INFO - Performing bivariate analysis...
+2025-12-31 19:32:24,146 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\numerical_vs_target_20251231_193222.png
+2025-12-31 19:32:25,538 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\categorical_vs_target_20251231_193224.png
+2025-12-31 19:32:25,538 - src.eda - INFO - Performing statistical tests with effect size reporting...
+2025-12-31 19:32:29,009 - src.eda - WARNING - Low expected frequencies for 'prevalentStroke' - consider Fisher's exact test
+2025-12-31 19:32:29,023 - src.eda - INFO - Analysing outliers...
+2025-12-31 19:32:31,218 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\eda\outlier_boxplots_20251231_193229.png
+2025-12-31 19:32:31,218 - src.utils - INFO - Complete EDA completed in 21.10 seconds
+2025-12-31 19:32:31,218 - src.eda - INFO - EDA completed successfully
+2025-12-31 19:32:31,225 - src.utils - INFO - 
+KEY EDA INSIGHTS:
+2025-12-31 19:32:31,225 - src.utils - INFO - ----------------------------------------
+2025-12-31 19:32:31,225 - src.utils - INFO - 
+Top 5 features correlated with target:
+2025-12-31 19:32:31,225 - src.utils - INFO -         feature  correlation  abs_correlation
+0           age     0.222542         0.222542
+1         sysBP     0.203757         0.203757
+2  prevalentHyp     0.166544         0.166544
+3         diaBP     0.131002         0.131002
+4       totChol     0.093054         0.093054
+2025-12-31 19:32:31,225 - src.utils - INFO - 
+Statistically significant numerical features: 7
+2025-12-31 19:32:31,225 - src.utils - INFO -         feature            test       p_value
+0           age  Mann-Whitney U  9.079019e-38
+2  prevalentHyp  Mann-Whitney U  3.154770e-22
+4       totChol  Mann-Whitney U  1.046681e-07
+5         sysBP  Mann-Whitney U  4.056518e-29
+6         diaBP  Mann-Whitney U  1.375383e-12
+7           BMI  Mann-Whitney U  9.971693e-05
+9       glucose  Mann-Whitney U  1.611184e-03
+2025-12-31 19:32:31,225 - src.utils - INFO - 
+Statistically significant categorical features: 4
+2025-12-31 19:32:31,235 - src.utils - INFO -              feature        test   p_value
+0          education  Chi-square  0.000087
+1                sex  Chi-square  0.000001
+3    prevalentStroke  Chi-square  0.000218
+4  smoking_intensity  Chi-square  0.000836
+2025-12-31 19:32:31,235 - src.utils - INFO - 
+Total samples with outliers: 200
+2025-12-31 19:32:31,235 - src.utils - INFO - Features with most outliers:
+2025-12-31 19:32:31,235 - src.utils - INFO -   glucose: 200 outliers
+2025-12-31 19:32:31,235 - src.eda - INFO - Generating EDA report...
+2025-12-31 19:32:31,250 - src.eda - INFO - EDA report saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\eda_report_20251231_193231.txt
+2025-12-31 19:32:31,250 - src.utils - INFO - 
+EDA report generated successfully!
+2025-12-31 19:32:31,250 - src.utils - INFO - Phase 2 completed in 21.14 seconds
+2025-12-31 19:32:31,250 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:31,250 - src.utils - INFO - PHASES 1 & 2 COMPLETED SUCCESSFULLY
+2025-12-31 19:32:31,250 - src.utils - INFO - ============================================================
+2025-12-31 19:32:31,250 - src.utils - INFO - 
+Next steps:
+2025-12-31 19:32:31,250 - src.utils - INFO - - Phase 3: Feature Engineering
+2025-12-31 19:32:31,250 - src.utils - INFO - - Phase 4: Data Splitting & Class Imbalance Handling
+2025-12-31 19:32:31,250 - src.utils - INFO - - Phase 5: Model Development Pipeline
+2025-12-31 19:32:31,250 - src.utils - INFO - 
+Processed data saved in: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\data\processed
+2025-12-31 19:32:31,250 - src.utils - INFO - EDA visualisations saved in: reports/figures/eda/
+2025-12-31 19:32:31,250 - src.utils - INFO - EDA report saved in: reports/tables/
+2025-12-31 19:32:31,250 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:31,250 - src.utils - INFO - PHASE 3: FEATURE ENGINEERING
+2025-12-31 19:32:31,250 - src.utils - INFO - ============================================================
+2025-12-31 19:32:31,250 - src.utils - INFO - Phase 3 started
+2025-12-31 19:32:31,250 - src.feature_engineering - INFO - Starting feature engineering...
+2025-12-31 19:32:31,250 - src.utils - INFO - Feature engineering started
+2025-12-31 19:32:31,266 - src.feature_engineering - INFO - Creating medical features...
+2025-12-31 19:32:31,329 - src.feature_engineering - INFO - Creating interaction features...
+2025-12-31 19:32:31,335 - src.feature_engineering - INFO - Creating binned features...
+2025-12-31 19:32:31,335 - src.feature_engineering - INFO - Encoding categorical features...
+2025-12-31 19:32:31,361 - src.feature_engineering - INFO - Updated feature lists after engineering:
+2025-12-31 19:32:31,361 - src.feature_engineering - INFO -   Numerical: 25 features
+2025-12-31 19:32:31,361 - src.feature_engineering - INFO -   Categorical: 5 features
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - Feature engineering complete. Total features: 30
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - New features created: 15
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - Final numerical features: 25
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - Final categorical features: 5
+2025-12-31 19:32:31,377 - src.utils - INFO - Feature engineering completed in 0.13 seconds
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - 
+New features created:
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   pulse_pressure: Systolic BP - Diastolic BP
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   mean_arterial_pressure: Diastolic BP + (Pulse Pressure / 3)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   metabolic_risk: Combined risk from BMI > 30 and glucose > 100
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   age_chol_risk: Total cholesterol / age
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   hypertension_stage: Hypertension severity (0-4 scale)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   hr_category: Heart rate category (0=brady, 1=normal, 2=tachy)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   age_smoking_interaction: Age × smoking status
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   bmi_diabetes_interaction: BMI × diabetes status
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   bp_meds_effectiveness: Systolic BP × (1 - BP medication)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   chol_age_interaction: Total cholesterol × age / 100
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   risk_factor_count: Count of major risk factors
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   age_group: Age group category (0-3)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   bmi_category: BMI category (0-5, WHO classification)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   chol_category: Cholesterol level category (0-2)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   glucose_category: Glucose level category (0-3)
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - 
+Categorical encodings applied:
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   education: {np.float64(1.0): 0, np.float64(2.0): 1, np.float64(3.0): 2, np.float64(4.0): 3}
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   sex: {'F': 0, 'M': 1}
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   is_smoking: {'NO': 0, 'YES': 1}
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   prevalentStroke: {np.int64(0): 0, np.int64(1): 1}
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO -   smoking_intensity: {'heavy': 0, 'light': 1, 'moderate': 2, 'non_smoker': 3}
+2025-12-31 19:32:31,377 - src.feature_engineering - INFO - Creating medical features...
+2025-12-31 19:32:31,409 - src.feature_engineering - INFO - Creating interaction features...
+2025-12-31 19:32:31,409 - src.feature_engineering - INFO - Creating binned features...
+2025-12-31 19:32:31,425 - src.feature_engineering - INFO - Encoding categorical features...
+2025-12-31 19:32:31,441 - src.utils - INFO - 
+Feature engineering completed:
+2025-12-31 19:32:31,441 - src.utils - INFO - Original features: 15
+2025-12-31 19:32:31,441 - src.utils - INFO - Engineered features: 30
+2025-12-31 19:32:31,441 - src.utils - INFO - New features created: 30
+2025-12-31 19:32:31,441 - src.utils - INFO - 
+New features:
+2025-12-31 19:32:31,441 - src.utils - INFO -   - pulse_pressure: Systolic BP - Diastolic BP
+2025-12-31 19:32:31,441 - src.utils - INFO -   - mean_arterial_pressure: Diastolic BP + (Pulse Pressure / 3)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - metabolic_risk: Combined risk from BMI > 30 and glucose > 100
+2025-12-31 19:32:31,441 - src.utils - INFO -   - age_chol_risk: Total cholesterol / age
+2025-12-31 19:32:31,441 - src.utils - INFO -   - hypertension_stage: Hypertension severity (0-4 scale)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - hr_category: Heart rate category (0=brady, 1=normal, 2=tachy)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - age_smoking_interaction: Age × smoking status
+2025-12-31 19:32:31,441 - src.utils - INFO -   - bmi_diabetes_interaction: BMI × diabetes status
+2025-12-31 19:32:31,441 - src.utils - INFO -   - bp_meds_effectiveness: Systolic BP × (1 - BP medication)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - chol_age_interaction: Total cholesterol × age / 100
+2025-12-31 19:32:31,441 - src.utils - INFO -   - risk_factor_count: Count of major risk factors
+2025-12-31 19:32:31,441 - src.utils - INFO -   - age_group: Age group category (0-3)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - bmi_category: BMI category (0-5, WHO classification)
+2025-12-31 19:32:31,441 - src.utils - INFO -   - chol_category: Cholesterol level category (0-2)
+2025-12-31 19:32:31,456 - src.utils - INFO -   - glucose_category: Glucose level category (0-3)
+2025-12-31 19:32:31,568 - src.utils - INFO - Phase 3 completed in 0.32 seconds
+2025-12-31 19:32:31,568 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:31,568 - src.utils - INFO - PHASE 4: CLASS IMBALANCE HANDLING
+2025-12-31 19:32:31,568 - src.utils - INFO - ============================================================
+2025-12-31 19:32:31,568 - src.utils - INFO - Phase 4 started
+2025-12-31 19:32:31,568 - src.class_imbalance - INFO - Analysing class imbalance...
+2025-12-31 19:32:32,158 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\imbalance\class_distribution_20251231_193231.png
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Imbalance ratio: 5.63
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Minority class: 1 (15.1%)
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Calculating class weights...
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Class weights: {np.int64(0): np.float64(0.5887460923931921), np.int64(1): np.float64(3.3170254403131114)}
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Identified categorical feature indices: [14, 15, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Comparing sampling methods: ['none', 'smote', 'borderline_smote', 'adasyn', 'random_under', 'smote_tomek', 'smote_nc']
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - 
+Testing method: none
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - 
+Testing method: smote
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Applying SMOTE variant: regular
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:32,158 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,343 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:34,343 - src.class_imbalance - INFO - Resampled distribution: {1: 2879, 0: 2879}
+2025-12-31 19:32:34,343 - src.class_imbalance - INFO - 
+Testing method: borderline_smote
+2025-12-31 19:32:34,343 - src.class_imbalance - INFO - Applying SMOTE variant: borderline
+2025-12-31 19:32:34,353 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:34,353 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - Resampled distribution: {1: 2879, 0: 2879}
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - 
+Testing method: adasyn
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - Applying SMOTE variant: adasyn
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:34,388 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,443 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:34,443 - src.class_imbalance - INFO - Resampled distribution: {1: 3000, 0: 2879}
+2025-12-31 19:32:34,452 - src.class_imbalance - INFO - 
+Testing method: random_under
+2025-12-31 19:32:34,452 - src.class_imbalance - INFO - Applying undersampling: random
+2025-12-31 19:32:34,452 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:34,452 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - Resampled distribution: {0: 511, 1: 511}
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - 
+Testing method: smote_tomek
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - Applying combined sampling: smote_tomek
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:34,467 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,613 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:34,613 - src.class_imbalance - INFO - Resampled distribution: {1: 2851, 0: 2851}
+2025-12-31 19:32:34,625 - src.class_imbalance - INFO - 
+Testing method: smote_nc
+2025-12-31 19:32:34,625 - src.class_imbalance - INFO - Applying SMOTE variant: nc
+2025-12-31 19:32:34,625 - src.class_imbalance - INFO - Validating data for SMOTE...
+2025-12-31 19:32:34,629 - src.class_imbalance - INFO - Data validation for SMOTE completed successfully
+2025-12-31 19:32:34,631 - src.class_imbalance - INFO - Using SMOTE-NC with categorical features at indices: [14, 15, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+2025-12-31 19:32:35,282 - src.class_imbalance - INFO - Original distribution: {1: 511, 0: 2879}
+2025-12-31 19:32:35,282 - src.class_imbalance - INFO - Resampled distribution: {1: 2879, 0: 2879}
+2025-12-31 19:32:36,015 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\imbalance\sampling_methods_comparison_20251231_193235.png
+2025-12-31 19:32:36,015 - src.class_imbalance - INFO - Selected best sampling method: smote
+2025-12-31 19:32:36,015 - src.class_imbalance - INFO - Creating 5 stratified folds...
+2025-12-31 19:32:36,031 - src.class_imbalance - INFO - Fold 1: Train distribution: {0: 84.95575221238938, 1: 15.04424778761062}, Val distribution: {0: 84.80825958702066, 1: 15.191740412979351}
+2025-12-31 19:32:36,031 - src.class_imbalance - INFO - Fold 2: Train distribution: {0: 84.9188790560472, 1: 15.081120943952802}, Val distribution: {0: 84.95575221238938, 1: 15.04424778761062}
+2025-12-31 19:32:36,031 - src.class_imbalance - INFO - Fold 3: Train distribution: {0: 84.9188790560472, 1: 15.081120943952802}, Val distribution: {0: 84.95575221238938, 1: 15.04424778761062}
+2025-12-31 19:32:36,031 - src.class_imbalance - INFO - Fold 4: Train distribution: {0: 84.9188790560472, 1: 15.081120943952802}, Val distribution: {0: 84.95575221238938, 1: 15.04424778761062}
+2025-12-31 19:32:36,045 - src.class_imbalance - INFO - Fold 5: Train distribution: {0: 84.9188790560472, 1: 15.081120943952802}, Val distribution: {0: 84.95575221238938, 1: 15.04424778761062}
+2025-12-31 19:32:36,045 - src.utils - INFO - 
+Imbalance handling results:
+2025-12-31 19:32:36,045 - src.utils - INFO - Original imbalance ratio: 5.63
+2025-12-31 19:32:36,045 - src.utils - INFO - Class weights calculated: {np.int64(0): np.float64(0.5887460923931921), np.int64(1): np.float64(3.3170254403131114)}
+2025-12-31 19:32:36,047 - src.utils - INFO - 
+Sampling methods comparison saved to: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\sampling_methods_comparison.csv
+2025-12-31 19:32:36,047 - src.utils - INFO - Phase 4 completed in 4.48 seconds
+2025-12-31 19:32:36,047 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:36,047 - src.utils - INFO - PHASE 5: BASELINE MODEL DEVELOPMENT
+2025-12-31 19:32:36,047 - src.utils - INFO - ============================================================
+2025-12-31 19:32:36,047 - src.utils - INFO - Phase 5 started
+2025-12-31 19:32:36,063 - src.utils - INFO - Train-Validation-Test split created:
+2025-12-31 19:32:36,063 - src.utils - INFO - Training set: (2034, 30)
+2025-12-31 19:32:36,063 - src.utils - INFO - Validation set: (678, 30)
+2025-12-31 19:32:36,063 - src.utils - INFO - Test set: (678, 30)
+2025-12-31 19:32:36,063 - src.model_training - INFO - Training comprehensive baseline logistic regression model...
+2025-12-31 19:32:36,063 - src.utils - INFO - Baseline model training started
+2025-12-31 19:32:36,117 - src.model_training - INFO - Performing cross-validation evaluation...
+2025-12-31 19:32:36,482 - src.model_training - INFO - Generating baseline model visualizations...
+2025-12-31 19:32:36,819 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_roc_curve_20251231_193236.png
+2025-12-31 19:32:37,146 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_pr_curve_20251231_193236.png
+2025-12-31 19:32:37,417 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_confusion_matrix_20251231_193237.png
+2025-12-31 19:32:37,963 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_feature_coefficients_20251231_193237.png
+2025-12-31 19:32:38,986 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_performance_summary_20251231_193238.png
+2025-12-31 19:32:38,986 - src.model_training - INFO - Generated 5 baseline visualizations
+2025-12-31 19:32:38,986 - src.model_training - INFO - Performing threshold optimization...
+2025-12-31 19:32:41,262 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_threshold_optimisation_20251231_193240.png
+2025-12-31 19:32:41,262 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:32:41,262 - src.model_training - INFO -   Best F1 threshold: 0.590 (F1: 0.378)
+2025-12-31 19:32:41,262 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.500 (BA: 0.669)
+2025-12-31 19:32:41,262 - src.model_training - INFO - Assessing model calibration...
+2025-12-31 19:32:42,064 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_calibration_analysis_20251231_193241.png
+2025-12-31 19:32:42,064 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:32:42,064 - src.model_training - INFO -   Brier Score: 0.214
+2025-12-31 19:32:42,080 - src.model_training - INFO -   Mean Calibration Error: 0.255
+2025-12-31 19:32:42,080 - src.model_training - INFO -   Calibration Quality: Poor
+2025-12-31 19:32:42,080 - src.model_training - INFO - Memory usage: 833.01 MB
+2025-12-31 19:32:42,080 - src.utils - INFO - Baseline model training completed in 6.02 seconds
+
+============================================================
+BASELINE LOGISTIC REGRESSION MODEL SUMMARY
+============================================================
+
+Training Time: 6.0175 seconds
+
+Performance Metrics:
+------------------------------
+            accuracy:   0.6563
+           precision:   0.2583
+              recall:   0.6863
+                  f1:   0.3753
+             roc_auc:   0.7074
+   average_precision:   0.3377
+   matthews_corrcoef:   0.2462
+
+Top 10 Feature Coefficients (by magnitude):
+--------------------------------------------------
+                       totChol:     0.8700
+                           age:     0.8459
+            is_smoking_encoded:     0.8163
+          chol_age_interaction:    -0.8043
+       age_smoking_interaction:    -0.4977
+                           BMI:    -0.3822
+                  prevalentHyp:     0.3821
+                  bmi_category:     0.3044
+            hypertension_stage:    -0.2907
+                   sex_encoded:     0.2819
+
+============================================================
+2025-12-31 19:32:42,080 - src.model_training - INFO - 
+Cross-validation results:
+2025-12-31 19:32:42,080 - src.model_training - INFO -   accuracy: 0.6672 (+/- 0.0257)
+2025-12-31 19:32:42,080 - src.model_training - INFO -   precision: 0.2618 (+/- 0.0265)
+2025-12-31 19:32:42,080 - src.model_training - INFO -   recall: 0.6579 (+/- 0.0440)
+2025-12-31 19:32:42,080 - src.model_training - INFO -   f1: 0.3745 (+/- 0.0338)
+2025-12-31 19:32:42,080 - src.model_training - INFO -   roc_auc: 0.7091 (+/- 0.0354)
+2025-12-31 19:32:42,080 - src.model_training - INFO -   average_precision: 0.3288 (+/- 0.0240)
+2025-12-31 19:32:42,097 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\baseline\baseline_logistic_20251231_193242_metadata.json
+2025-12-31 19:32:42,097 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\baseline\baseline_logistic_20251231_193242.joblib
+2025-12-31 19:32:42,097 - src.model_training - INFO - Baseline model successfully saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\baseline\baseline_logistic_20251231_193242.joblib
+2025-12-31 19:32:42,098 - src.utils - INFO - 
+Enhanced Baseline Logistic Regression Results:
+2025-12-31 19:32:42,098 - src.utils - INFO - Training time: 6.02 seconds
+2025-12-31 19:32:42,098 - src.utils - INFO - Memory usage: 833.01 MB
+2025-12-31 19:32:42,098 - src.utils - INFO - 
+Validation metrics:
+2025-12-31 19:32:42,100 - src.utils - INFO -   accuracy: 0.6563
+2025-12-31 19:32:42,100 - src.utils - INFO -   precision: 0.2583
+2025-12-31 19:32:42,100 - src.utils - INFO -   recall: 0.6863
+2025-12-31 19:32:42,101 - src.utils - INFO -   f1: 0.3753
+2025-12-31 19:32:42,101 - src.utils - INFO -   roc_auc: 0.7074
+2025-12-31 19:32:42,101 - src.utils - INFO -   average_precision: 0.3377
+2025-12-31 19:32:42,101 - src.utils - INFO -   matthews_corrcoef: 0.2462
+2025-12-31 19:32:42,102 - src.utils - INFO - 
+Cross-validation metrics (5-fold):
+2025-12-31 19:32:42,102 - src.utils - INFO -   accuracy: 0.6672 (+/- 0.0257)
+2025-12-31 19:32:42,103 - src.utils - INFO -   precision: 0.2618 (+/- 0.0265)
+2025-12-31 19:32:42,103 - src.utils - INFO -   recall: 0.6579 (+/- 0.0440)
+2025-12-31 19:32:42,103 - src.utils - INFO -   f1: 0.3745 (+/- 0.0338)
+2025-12-31 19:32:42,104 - src.utils - INFO -   roc_auc: 0.7091 (+/- 0.0354)
+2025-12-31 19:32:42,104 - src.utils - INFO -   average_precision: 0.3288 (+/- 0.0240)
+2025-12-31 19:32:42,104 - src.utils - INFO - 
+Top 10 most important features (by coefficient magnitude):
+2025-12-31 19:32:42,104 - src.utils - INFO -   totChol: 0.8700
+2025-12-31 19:32:42,106 - src.utils - INFO -   age: 0.8459
+2025-12-31 19:32:42,106 - src.utils - INFO -   is_smoking_encoded: 0.8163
+2025-12-31 19:32:42,106 - src.utils - INFO -   chol_age_interaction: -0.8043
+2025-12-31 19:32:42,107 - src.utils - INFO -   age_smoking_interaction: -0.4977
+2025-12-31 19:32:42,107 - src.utils - INFO -   BMI: -0.3822
+2025-12-31 19:32:42,107 - src.utils - INFO -   prevalentHyp: 0.3821
+2025-12-31 19:32:42,107 - src.utils - INFO -   bmi_category: 0.3044
+2025-12-31 19:32:42,108 - src.utils - INFO -   hypertension_stage: -0.2907
+2025-12-31 19:32:42,108 - src.utils - INFO -   sex_encoded: 0.2819
+2025-12-31 19:32:42,108 - src.utils - INFO - 
+Generated visualizations:
+2025-12-31 19:32:42,109 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_roc_curve_20251231_193236.png
+2025-12-31 19:32:42,109 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_pr_curve_20251231_193236.png
+2025-12-31 19:32:42,109 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_confusion_matrix_20251231_193237.png
+2025-12-31 19:32:42,109 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_feature_coefficients_20251231_193237.png
+2025-12-31 19:32:42,110 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_performance_summary_20251231_193238.png
+2025-12-31 19:32:42,110 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_threshold_optimisation_20251231_193240.png
+2025-12-31 19:32:42,110 - src.utils - INFO -   - C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\baseline\baseline_calibration_analysis_20251231_193241.png
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+Threshold Optimization Results:
+2025-12-31 19:32:42,110 - src.utils - INFO -   Best F1 threshold: 0.590 (F1: 0.378)
+2025-12-31 19:32:42,110 - src.utils - INFO -   Best Balanced Accuracy threshold: 0.500 (BA: 0.669)
+2025-12-31 19:32:42,110 - src.utils - INFO -   Best Youden's J threshold: 0.500 (J: 0.337)
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+Model Calibration Assessment:
+2025-12-31 19:32:42,110 - src.utils - INFO -   Brier Score: 0.214
+2025-12-31 19:32:42,110 - src.utils - INFO -   Mean Calibration Error: 0.255
+2025-12-31 19:32:42,110 - src.utils - INFO -   Calibration Quality: Poor
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+Creating comprehensive baseline model report...
+2025-12-31 19:32:42,110 - src.utils - INFO - Baseline model report saved to: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\baseline_model_report_20251231_193242.json
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+==================================================
+2025-12-31 19:32:42,110 - src.utils - INFO - ENHANCED BASELINE MODEL ASSESSMENT
+2025-12-31 19:32:42,110 - src.utils - INFO - ==================================================
+2025-12-31 19:32:42,110 - src.utils - INFO - Good baseline performance (ROC-AUC ≥ 0.65)
+2025-12-31 19:32:42,110 - src.utils - INFO - ROC-AUC: 0.7074
+2025-12-31 19:32:42,110 - src.utils - INFO - F1-Score: 0.3753
+2025-12-31 19:32:42,110 - src.utils - INFO - Stable performance across CV folds
+2025-12-31 19:32:42,110 - src.utils - INFO - CV ROC-AUC std: 0.0354
+2025-12-31 19:32:42,110 - src.utils - INFO - Poor model calibration - calibration required
+2025-12-31 19:32:42,110 - src.utils - INFO - Calibration Quality: Poor
+2025-12-31 19:32:42,110 - src.utils - INFO - Recommended threshold for clinical use: 0.500 (Youden's J)
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+Most predictive feature: totChol (coef: 0.8700)
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+Clinical Insights:
+2025-12-31 19:32:42,110 - src.utils - INFO - • Total cholesterol and age are primary risk factors
+2025-12-31 19:32:42,110 - src.utils - INFO - • Interaction effects suggest complex relationships
+2025-12-31 19:32:42,110 - src.utils - INFO - • Model shows good discrimination ability (AUC > 0.7)
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+==================================================
+2025-12-31 19:32:42,110 - src.utils - INFO - ENHANCED BASELINE PHASE COMPLETED - READY FOR ADVANCED MODELS
+2025-12-31 19:32:42,110 - src.utils - INFO - ==================================================
+2025-12-31 19:32:42,110 - src.utils - INFO - Enhanced features added:
+2025-12-31 19:32:42,110 - src.utils - INFO - Threshold optimization (3 strategies)
+2025-12-31 19:32:42,110 - src.utils - INFO - Calibration assessment
+2025-12-31 19:32:42,110 - src.utils - INFO - 7 comprehensive visualizations
+2025-12-31 19:32:42,110 - src.utils - INFO - Clinical-grade model evaluation
+2025-12-31 19:32:42,110 - src.utils - INFO - Phase 5 completed in 6.06 seconds
+2025-12-31 19:32:42,110 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:42,126 - src.utils - INFO - BASELINE MODEL TRAINING COMPLETED
+2025-12-31 19:32:42,126 - src.utils - INFO - ============================================================
+2025-12-31 19:32:42,126 - src.utils - INFO - 
+Next steps:
+2025-12-31 19:32:42,126 - src.utils - INFO - - Phase 7: Model evaluation and comparison
+2025-12-31 19:32:42,126 - src.utils - INFO - - Phase 8: Feature importance and model interpretation
+2025-12-31 19:32:42,126 - src.utils - INFO - 
+============================================================
+2025-12-31 19:32:42,126 - src.utils - INFO - PHASE 6: ADVANCED MODELS + HYPERPARAMETER TUNING
+2025-12-31 19:32:42,126 - src.utils - INFO - ============================================================
+2025-12-31 19:32:42,126 - src.model_training - INFO - Phase 6: tuning svm
+2025-12-31 19:32:42,126 - src.utils - INFO - svm phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:37:41,466 - src.utils - INFO - svm phase6 tuning completed in 299.34 seconds
+2025-12-31 19:37:43,425 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\svm\svm_tuned_threshold_optimisation_20251231_193742.png
+2025-12-31 19:37:43,425 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:37:43,425 - src.model_training - INFO -   Best F1 threshold: 0.490 (F1: 0.376)
+2025-12-31 19:37:43,425 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.490 (BA: 0.672)
+2025-12-31 19:38:03,046 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\svm\svm_tuned_calibrated_threshold_optimisation_20251231_193802.png
+2025-12-31 19:38:03,046 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:38:03,046 - src.model_training - INFO -   Best F1 threshold: 0.210 (F1: 0.372)
+2025-12-31 19:38:03,046 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.150 (BA: 0.668)
+2025-12-31 19:38:03,795 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\svm\svm_tuned_calibrated_calibration_analysis_20251231_193803.png
+2025-12-31 19:38:03,795 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:38:03,795 - src.model_training - INFO -   Brier Score: 0.118
+2025-12-31 19:38:03,795 - src.model_training - INFO -   Mean Calibration Error: 0.112
+2025-12-31 19:38:03,795 - src.model_training - INFO -   Calibration Quality: Fair
+2025-12-31 19:38:03,795 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_20251231_193803_metadata.json
+2025-12-31 19:38:03,795 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_20251231_193803.joblib
+2025-12-31 19:38:03,827 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_calibrated_20251231_193803_metadata.json
+2025-12-31 19:38:03,827 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_calibrated_20251231_193803.joblib
+2025-12-31 19:38:03,827 - src.model_training - INFO - Phase 6: tuning random_forest
+2025-12-31 19:38:03,827 - src.utils - INFO - random_forest phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:40:34,248 - src.utils - INFO - random_forest phase6 tuning completed in 150.42 seconds
+2025-12-31 19:40:36,226 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\random_forest\random_forest_tuned_threshold_optimisation_20251231_194035.png
+2025-12-31 19:40:36,226 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:40:36,226 - src.model_training - INFO -   Best F1 threshold: 0.810 (F1: 0.355)
+2025-12-31 19:40:36,227 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.760 (BA: 0.642)
+2025-12-31 19:40:53,842 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\random_forest\random_forest_tuned_calibrated_threshold_optimisation_20251231_194052.png
+2025-12-31 19:40:53,842 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:40:53,843 - src.model_training - INFO -   Best F1 threshold: 0.200 (F1: 0.369)
+2025-12-31 19:40:53,843 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.200 (BA: 0.651)
+2025-12-31 19:40:54,610 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\random_forest\random_forest_tuned_calibrated_calibration_analysis_20251231_194054.png
+2025-12-31 19:40:54,610 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:40:54,610 - src.model_training - INFO -   Brier Score: 0.121
+2025-12-31 19:40:54,612 - src.model_training - INFO -   Mean Calibration Error: 0.021
+2025-12-31 19:40:54,612 - src.model_training - INFO -   Calibration Quality: Excellent
+2025-12-31 19:40:54,814 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_20251231_194054_metadata.json
+2025-12-31 19:40:54,815 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_20251231_194054.joblib
+2025-12-31 19:40:56,597 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_calibrated_20251231_194054_metadata.json
+2025-12-31 19:40:56,597 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_calibrated_20251231_194054.joblib
+2025-12-31 19:40:56,597 - src.model_training - INFO - Phase 6: tuning extra_trees
+2025-12-31 19:40:56,598 - src.utils - INFO - extra_trees phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:41:58,529 - src.utils - INFO - extra_trees phase6 tuning completed in 61.93 seconds
+2025-12-31 19:42:00,793 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\extra_trees\extra_trees_tuned_threshold_optimisation_20251231_194159.png
+2025-12-31 19:42:00,794 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:42:00,794 - src.model_training - INFO -   Best F1 threshold: 0.840 (F1: 0.364)
+2025-12-31 19:42:00,795 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.800 (BA: 0.655)
+2025-12-31 19:42:05,775 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\extra_trees\extra_trees_tuned_calibrated_threshold_optimisation_20251231_194204.png
+2025-12-31 19:42:05,776 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:42:05,776 - src.model_training - INFO -   Best F1 threshold: 0.210 (F1: 0.371)
+2025-12-31 19:42:05,776 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.210 (BA: 0.648)
+2025-12-31 19:42:06,594 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\extra_trees\extra_trees_tuned_calibrated_calibration_analysis_20251231_194206.png
+2025-12-31 19:42:06,594 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:42:06,595 - src.model_training - INFO -   Brier Score: 0.121
+2025-12-31 19:42:06,595 - src.model_training - INFO -   Mean Calibration Error: 0.042
+2025-12-31 19:42:06,595 - src.model_training - INFO -   Calibration Quality: Excellent
+2025-12-31 19:42:06,715 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_20251231_194206_metadata.json
+2025-12-31 19:42:06,715 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_20251231_194206.joblib
+2025-12-31 19:42:07,431 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_calibrated_20251231_194206_metadata.json
+2025-12-31 19:42:07,431 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_calibrated_20251231_194206.joblib
+2025-12-31 19:42:07,431 - src.model_training - INFO - Phase 6: tuning xgboost
+2025-12-31 19:42:07,431 - src.utils - INFO - xgboost phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:42:42,647 - src.utils - INFO - xgboost phase6 tuning completed in 35.22 seconds
+2025-12-31 19:42:45,845 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\xgboost\xgboost_tuned_threshold_optimisation_20251231_194244.png
+2025-12-31 19:42:45,845 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:42:45,846 - src.model_training - INFO -   Best F1 threshold: 0.770 (F1: 0.378)
+2025-12-31 19:42:45,846 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.760 (BA: 0.656)
+2025-12-31 19:42:51,032 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\xgboost\xgboost_tuned_calibrated_threshold_optimisation_20251231_194249.png
+2025-12-31 19:42:51,032 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:42:51,033 - src.model_training - INFO -   Best F1 threshold: 0.210 (F1: 0.372)
+2025-12-31 19:42:51,033 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.160 (BA: 0.656)
+2025-12-31 19:42:51,888 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\xgboost\xgboost_tuned_calibrated_calibration_analysis_20251231_194251.png
+2025-12-31 19:42:51,889 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:42:51,889 - src.model_training - INFO -   Brier Score: 0.120
+2025-12-31 19:42:51,889 - src.model_training - INFO -   Mean Calibration Error: 0.067
+2025-12-31 19:42:51,889 - src.model_training - INFO -   Calibration Quality: Good
+2025-12-31 19:42:51,904 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_20251231_194251_metadata.json
+2025-12-31 19:42:51,905 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_20251231_194251.joblib
+2025-12-31 19:42:51,994 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_calibrated_20251231_194251_metadata.json
+2025-12-31 19:42:51,995 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_calibrated_20251231_194251.joblib
+2025-12-31 19:42:51,995 - src.model_training - INFO - Phase 6: tuning lightgbm
+2025-12-31 19:42:51,996 - src.utils - INFO - lightgbm phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:45:54,910 - src.utils - INFO - lightgbm phase6 tuning completed in 182.91 seconds
+2025-12-31 19:45:57,018 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\lightgbm\lightgbm_tuned_threshold_optimisation_20251231_194556.png
+2025-12-31 19:45:57,018 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:45:57,018 - src.model_training - INFO -   Best F1 threshold: 0.660 (F1: 0.387)
+2025-12-31 19:45:57,019 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.660 (BA: 0.669)
+2025-12-31 19:46:01,677 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\lightgbm\lightgbm_tuned_calibrated_threshold_optimisation_20251231_194600.png
+2025-12-31 19:46:01,677 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:46:01,678 - src.model_training - INFO -   Best F1 threshold: 0.190 (F1: 0.389)
+2025-12-31 19:46:01,678 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.190 (BA: 0.669)
+2025-12-31 19:46:02,522 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\lightgbm\lightgbm_tuned_calibrated_calibration_analysis_20251231_194601.png
+2025-12-31 19:46:02,523 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:46:02,523 - src.model_training - INFO -   Brier Score: 0.119
+2025-12-31 19:46:02,523 - src.model_training - INFO -   Mean Calibration Error: 0.092
+2025-12-31 19:46:02,523 - src.model_training - INFO -   Calibration Quality: Good
+2025-12-31 19:46:02,552 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_20251231_194602_metadata.json
+2025-12-31 19:46:02,553 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_20251231_194602.joblib
+2025-12-31 19:46:02,671 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_calibrated_20251231_194602_metadata.json
+2025-12-31 19:46:02,671 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_calibrated_20251231_194602.joblib
+2025-12-31 19:46:02,672 - src.model_training - INFO - Phase 6: tuning catboost
+2025-12-31 19:46:02,672 - src.utils - INFO - catboost phase6 tuning started
+Fitting 5 folds for each of 30 candidates, totalling 150 fits
+2025-12-31 19:50:29,799 - src.utils - INFO - catboost phase6 tuning completed in 267.13 seconds
+2025-12-31 19:50:33,242 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\catboost\catboost_tuned_threshold_optimisation_20251231_195031.png
+2025-12-31 19:50:33,243 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:50:33,243 - src.model_training - INFO -   Best F1 threshold: 0.770 (F1: 0.386)
+2025-12-31 19:50:33,243 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.740 (BA: 0.661)
+2025-12-31 19:50:39,319 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\catboost\catboost_tuned_calibrated_threshold_optimisation_20251231_195038.png
+2025-12-31 19:50:39,319 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:50:39,319 - src.model_training - INFO -   Best F1 threshold: 0.210 (F1: 0.382)
+2025-12-31 19:50:39,319 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.180 (BA: 0.662)
+2025-12-31 19:50:40,194 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\catboost\catboost_tuned_calibrated_calibration_analysis_20251231_195039.png
+2025-12-31 19:50:40,196 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:50:40,196 - src.model_training - INFO -   Brier Score: 0.119
+2025-12-31 19:50:40,196 - src.model_training - INFO -   Mean Calibration Error: 0.036
+2025-12-31 19:50:40,197 - src.model_training - INFO -   Calibration Quality: Excellent
+2025-12-31 19:50:40,203 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_20251231_195040_metadata.json
+2025-12-31 19:50:40,203 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_20251231_195040.joblib
+2025-12-31 19:50:40,229 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_calibrated_20251231_195040_metadata.json
+2025-12-31 19:50:40,229 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_calibrated_20251231_195040.joblib
+2025-12-31 19:50:40,229 - src.model_training - INFO - Phase 6: tuning ebm
+2025-12-31 19:50:40,230 - src.utils - INFO - ebm phase6 tuning started
+Fitting 5 folds for each of 8 candidates, totalling 40 fits
+2025-12-31 19:53:30,292 - src.utils - INFO - ebm phase6 tuning completed in 170.06 seconds
+2025-12-31 19:53:32,341 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\ebm\ebm_tuned_threshold_optimisation_20251231_195331.png
+2025-12-31 19:53:32,341 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:53:32,341 - src.model_training - INFO -   Best F1 threshold: 0.220 (F1: 0.377)
+2025-12-31 19:53:32,341 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.200 (BA: 0.664)
+2025-12-31 19:54:03,853 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\ebm\ebm_tuned_calibrated_threshold_optimisation_20251231_195402.png
+2025-12-31 19:54:03,853 - src.model_training - INFO - Threshold optimization completed:
+2025-12-31 19:54:03,853 - src.model_training - INFO -   Best F1 threshold: 0.170 (F1: 0.365)
+2025-12-31 19:54:03,853 - src.model_training - INFO -   Best Balanced Accuracy threshold: 0.160 (BA: 0.657)
+2025-12-31 19:54:04,714 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\tuned\ebm\ebm_tuned_calibrated_calibration_analysis_20251231_195404.png
+2025-12-31 19:54:04,714 - src.model_training - INFO - Model calibration assessment completed:
+2025-12-31 19:54:04,714 - src.model_training - INFO -   Brier Score: 0.120
+2025-12-31 19:54:04,715 - src.model_training - INFO -   Mean Calibration Error: 0.044
+2025-12-31 19:54:04,715 - src.model_training - INFO -   Calibration Quality: Excellent
+2025-12-31 19:54:04,746 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_20251231_195404_metadata.json
+2025-12-31 19:54:04,746 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_20251231_195404.joblib
+2025-12-31 19:54:04,871 - src.utils - INFO - Metadata saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_calibrated_20251231_195404_metadata.json
+2025-12-31 19:54:04,872 - src.utils - INFO - Model saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_calibrated_20251231_195404.joblib
+2025-12-31 19:54:04,872 - src.utils - INFO - 
+============================================================
+2025-12-31 19:54:04,873 - src.utils - INFO - PHASE 7: MODEL EVALUATION + COMPARISON
+2025-12-31 19:54:04,873 - src.utils - INFO - ============================================================
+2025-12-31 19:54:04,883 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_20251231_193803.joblib
+2025-12-31 19:54:04,906 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_calibrated_20251231_193803.joblib
+2025-12-31 19:54:05,325 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_20251231_194054.joblib
+2025-12-31 19:54:06,324 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_calibrated_20251231_194054.joblib
+2025-12-31 19:54:06,413 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_20251231_194206.joblib
+2025-12-31 19:54:06,949 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_calibrated_20251231_194206.joblib
+2025-12-31 19:54:06,968 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_20251231_194251.joblib
+2025-12-31 19:54:07,054 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_calibrated_20251231_194251.joblib
+2025-12-31 19:54:07,075 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_20251231_194602.joblib
+2025-12-31 19:54:07,149 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_calibrated_20251231_194602.joblib
+2025-12-31 19:54:07,155 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_20251231_195040.joblib
+2025-12-31 19:54:07,178 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_calibrated_20251231_195040.joblib
+2025-12-31 19:54:07,233 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_20251231_195404.joblib
+2025-12-31 19:54:07,353 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_calibrated_20251231_195404.joblib
+2025-12-31 19:54:07,354 - src.utils - INFO - Loaded 15 model(s) for evaluation:
+2025-12-31 19:54:07,354 - src.utils - INFO -   - baseline_logistic (threshold=0.590)
+2025-12-31 19:54:07,354 - src.utils - INFO -   - svm_tuned (threshold=0.490)
+2025-12-31 19:54:07,355 - src.utils - INFO -   - svm_tuned_calibrated (threshold=0.210)
+2025-12-31 19:54:07,355 - src.utils - INFO -   - random_forest_tuned (threshold=0.810)
+2025-12-31 19:54:07,355 - src.utils - INFO -   - random_forest_tuned_calibrated (threshold=0.200)
+2025-12-31 19:54:07,355 - src.utils - INFO -   - extra_trees_tuned (threshold=0.840)
+2025-12-31 19:54:07,356 - src.utils - INFO -   - extra_trees_tuned_calibrated (threshold=0.210)
+2025-12-31 19:54:07,356 - src.utils - INFO -   - xgboost_tuned (threshold=0.770)
+2025-12-31 19:54:07,356 - src.utils - INFO -   - xgboost_tuned_calibrated (threshold=0.210)
+2025-12-31 19:54:07,357 - src.utils - INFO -   - lightgbm_tuned (threshold=0.660)
+2025-12-31 19:54:07,357 - src.utils - INFO -   - lightgbm_tuned_calibrated (threshold=0.190)
+2025-12-31 19:54:07,357 - src.utils - INFO -   - catboost_tuned (threshold=0.770)
+2025-12-31 19:54:07,357 - src.utils - INFO -   - catboost_tuned_calibrated (threshold=0.210)
+2025-12-31 19:54:07,358 - src.utils - INFO -   - ebm_tuned (threshold=0.220)
+2025-12-31 19:54:07,358 - src.utils - INFO -   - ebm_tuned_calibrated (threshold=0.170)
+2025-12-31 19:54:07,358 - src.evaluation - INFO - Phase 7: evaluating 15 model(s) on 678 samples
+2025-12-31 19:57:32,714 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\evaluation\phase7_roc_curves_20251231_195731.png
+2025-12-31 19:57:33,634 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\evaluation\phase7_pr_curves_20251231_195732.png
+2025-12-31 19:57:34,562 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\evaluation\phase7_calibration_curves_20251231_195733.png
+2025-12-31 19:57:37,229 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\evaluation\phase7_decision_curves_20251231_195736.png
+2025-12-31 19:59:48,624 - src.utils - INFO - 
+Phase 7 outputs:
+2025-12-31 19:59:48,624 - src.utils - INFO -   Comparison table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase7_model_comparison_20251231_195731.csv
+2025-12-31 19:59:48,625 - src.utils - INFO -   Figures: {'roc_curves': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\figures\\evaluation\\phase7_roc_curves_20251231_195731.png', 'pr_curves': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\figures\\evaluation\\phase7_pr_curves_20251231_195732.png', 'calibration_curves': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\figures\\evaluation\\phase7_calibration_curves_20251231_195733.png', 'decision_curves': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\figures\\evaluation\\phase7_decision_curves_20251231_195736.png'}
+2025-12-31 19:59:48,625 - src.utils - INFO -   Bootstrap CIs: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase7_bootstrap_cis_20251231_195731.csv
+2025-12-31 19:59:48,625 - src.utils - INFO -   Pairwise tests: {'auc_delong': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\tables\\phase7_pairwise_auc_delong_20251231_195731.csv', 'ap_bootstrap': 'C:\\Users\\gkorc\\Documents\\GitHub\\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\\reports\\tables\\phase7_pairwise_ap_bootstrap_20251231_195731.csv'}
+2025-12-31 19:59:48,626 - src.utils - INFO - 
+Recommended model (default ranking): svm_tuned_calibrated
+2025-12-31 19:59:48,648 - src.utils - INFO - 
+============================================================
+2025-12-31 19:59:48,648 - src.utils - INFO - PHASE 8: FEATURE IMPORTANCE + MODEL INTERPRETATION
+2025-12-31 19:59:48,648 - src.utils - INFO - ============================================================
+2025-12-31 19:59:49,702 - src.interpretation - WARNING - Guardrail note: 3 all-zero feature columns in X_test (10.0% of features): BPMeds, diabetes, bmi_diabetes_interaction
+This can be normal for rare binaries / one-hot levels absent in the test split.
+Continuing (small number of all-zero columns). If desired, allowlist them in PHASE8_ALL_ZERO_ALLOWLIST.
+2025-12-31 19:59:49,702 - src.interpretation - INFO - Phase 8 guardrails passed (n_test=678, target='TenYearCHD', all-zero cols=0).
+2025-12-31 19:59:49,708 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_20251231_193803.joblib
+2025-12-31 19:59:49,731 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\svm\svm_tuned_calibrated_20251231_193803.joblib
+2025-12-31 19:59:49,897 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_20251231_194054.joblib
+2025-12-31 19:59:50,866 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\random_forest\random_forest_tuned_calibrated_20251231_194054.joblib
+2025-12-31 19:59:50,947 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_20251231_194206.joblib
+2025-12-31 19:59:51,434 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\extra_trees\extra_trees_tuned_calibrated_20251231_194206.joblib
+2025-12-31 19:59:51,450 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_20251231_194251.joblib
+2025-12-31 19:59:51,549 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\xgboost\xgboost_tuned_calibrated_20251231_194251.joblib
+2025-12-31 19:59:51,569 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_20251231_194602.joblib
+2025-12-31 19:59:51,659 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\lightgbm\lightgbm_tuned_calibrated_20251231_194602.joblib
+2025-12-31 19:59:51,667 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_20251231_195040.joblib
+2025-12-31 19:59:51,695 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\catboost\catboost_tuned_calibrated_20251231_195040.joblib
+2025-12-31 19:59:51,735 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_20251231_195404.joblib
+2025-12-31 19:59:51,830 - src.utils - INFO - Model loaded from C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\models\tuned\ebm\ebm_tuned_calibrated_20251231_195404.joblib
+2025-12-31 19:59:51,840 - src.interpretation - INFO - Phase 8 header table saved to: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_header_metrics_20251231_195951.csv
+ 99%|===================| 1338/1356 [00:18<00:00]       2025-12-31 20:00:10,517 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_beeswarm_top20_extra_trees_tuned_calibrated_20251231_200009.png
+2025-12-31 20:00:11,007 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_bar_top20_extra_trees_tuned_calibrated_20251231_200010.png
+2025-12-31 20:00:11,011 - src.interpretation - INFO - Phase 8 SHAP outputs saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_beeswarm_top20_extra_trees_tuned_calibrated_20251231_200009.png, C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_bar_top20_extra_trees_tuned_calibrated_20251231_200010.png, C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_mean_abs_extra_trees_tuned_calibrated_20251231_200011.csv
+2025-12-31 20:01:10,073 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_perm_importance_bar_top20_extra_trees_tuned_calibrated_20251231_200109.png
+2025-12-31 20:01:10,074 - src.interpretation - INFO - Permutation importance saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_perm_importance_extra_trees_tuned_calibrated.csv and C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_perm_importance_bar_top20_extra_trees_tuned_calibrated_20251231_200109.png
+2025-12-31 20:01:10,095 - src.interpretation - INFO - SHAP vs permutation overlap (top20): 13 shared features. Table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_perm_overlap_top20_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:10,502 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200110.png
+2025-12-31 20:01:10,905 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200110.png
+2025-12-31 20:01:11,336 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200111.png
+2025-12-31 20:01:11,912 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200111.png
+2025-12-31 20:01:12,333 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200112.png
+2025-12-31 20:01:12,765 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200112.png
+2025-12-31 20:01:13,178 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200112.png
+2025-12-31 20:01:13,587 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_extra_trees_tuned_calibrated_20251231_200113.png
+2025-12-31 20:01:14,047 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_interaction_extra_trees_tuned_calibrated_20251231_200113.png
+2025-12-31 20:01:14,705 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_dependence_interaction_extra_trees_tuned_calibrated_20251231_200114.png
+2025-12-31 20:01:14,705 - src.interpretation - INFO - Saved 10 SHAP dependence plots for extra_trees_tuned_calibrated
+2025-12-31 20:01:15,377 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_risk_deciles_plot_extra_trees_tuned_calibrated_20251231_200114.png
+2025-12-31 20:01:15,378 - src.interpretation - INFO - Risk deciles saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_risk_deciles_extra_trees_tuned_calibrated.csv and C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_risk_deciles_plot_extra_trees_tuned_calibrated_20251231_200114.png
+2025-12-31 20:01:15,811 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_reliability_extra_trees_tuned_calibrated_20251231_200115.png
+2025-12-31 20:01:15,812 - src.interpretation - INFO - Reliability diagram saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_reliability_extra_trees_tuned_calibrated_20251231_200115.png (bins CSV: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_reliability_bins_extra_trees_tuned_calibrated.csv)
+2025-12-31 20:01:16,635 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx3094_highest_risk_20251231_200115.png
+2025-12-31 20:01:17,316 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx459_highest_risk_20251231_200116.png
+2025-12-31 20:01:18,017 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx2069_lowest_risk_20251231_200117.png
+2025-12-31 20:01:18,774 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx24_lowest_risk_20251231_200118.png
+2025-12-31 20:01:19,468 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx1141_borderline_20251231_200118.png
+2025-12-31 20:01:20,402 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\local\phase8_local_waterfall_extra_trees_tuned_calibrated_idx776_borderline_20251231_200119.png
+2025-12-31 20:01:20,403 - src.interpretation - INFO - Local case summary saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_local_cases_summary.csv
+2025-12-31 20:01:20,403 - src.interpretation - INFO - Saved 6 waterfall plots and 6 markdown case notes.
+2025-12-31 20:01:20,939 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_error_analysis_by_group_extra_trees_tuned_calibrated_20251231_200120.png
+2025-12-31 20:01:20,939 - src.interpretation - INFO - Error analysis saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_error_analysis_by_group.csv and C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_error_analysis_by_group_extra_trees_tuned_calibrated_20251231_200120.png
+2025-12-31 20:01:20,988 - src.interpretation - INFO - SHAP stability saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_stability_shap_top25_extra_trees_tuned_calibrated.csv and C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_stability_shap_rankcorr_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,570 - src.utils - INFO - Figure saved to C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_bar_sampled_catboost_tuned_calibrated_n500_20251231_200123.png
+2025-12-31 20:01:23,571 - src.interpretation - INFO - Light SHAP saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_mean_abs_catboost_tuned_calibrated_test500_20251231_200123.csv and C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_bar_sampled_catboost_tuned_calibrated_n500_20251231_200123.png
+2025-12-31 20:01:23,576 - src.interpretation - INFO - Logistic coefficients saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_logistic_coeffs_baseline_logistic.csv
+2025-12-31 20:01:23,592 - src.interpretation - INFO - Cross-model comparison table saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_cross_model_top10_comparison.csv
+2025-12-31 20:01:23,612 - src.interpretation - INFO - Phase 8 'what we learned' summary saved: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_what_we_learned_summary.csv
+2025-12-31 20:01:23,665 - src.interpretation - INFO - Model card written/updated: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\model_cards\model_card_extra_trees_tuned_calibrated.md
+2025-12-31 20:01:23,665 - src.interpretation - INFO - Phase 8 chapter written: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\model_cards\phase8_interpretation_chapter_extra_trees_tuned_calibrated.md
+2025-12-31 20:01:23,667 - src.utils - INFO - 
+Phase 8 outputs:==========
+2025-12-31 20:01:23,667 - src.utils - INFO -   Header table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_header_metrics_20251231_195951.csv
+2025-12-31 20:01:23,667 - src.utils - INFO -   SHAP beeswarm: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_beeswarm_top20_extra_trees_tuned_calibrated_20251231_200009.png
+2025-12-31 20:01:23,667 - src.utils - INFO -   SHAP bar: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_shap_bar_top20_extra_trees_tuned_calibrated_20251231_200010.png
+2025-12-31 20:01:23,668 - src.utils - INFO -   mean(|SHAP|) table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_mean_abs_extra_trees_tuned_calibrated_20251231_200011.csv
+2025-12-31 20:01:23,668 - src.utils - INFO -   Permutation CSV: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_perm_importance_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,668 - src.utils - INFO -   Permutation bar: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_perm_importance_bar_top20_extra_trees_tuned_calibrated_20251231_200109.png
+2025-12-31 20:01:23,669 - src.utils - INFO -   SHAP-Perm overlap table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_perm_overlap_top20_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,669 - src.utils - INFO -   Dependence plots: 10 files
+2025-12-31 20:01:23,669 - src.utils - INFO -   Risk deciles table: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_risk_deciles_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,669 - src.utils - INFO -   Risk deciles plot: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_risk_deciles_plot_extra_trees_tuned_calibrated_20251231_200114.png
+2025-12-31 20:01:23,670 - src.utils - INFO -   Reliability bins: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_reliability_bins_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,670 - src.utils - INFO -   Reliability plot: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_reliability_extra_trees_tuned_calibrated_20251231_200115.png
+2025-12-31 20:01:23,670 - src.utils - INFO -   Local cases summary: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_local_cases_summary.csv
+2025-12-31 20:01:23,670 - src.utils - INFO -   Local waterfall plots: 6
+2025-12-31 20:01:23,670 - src.utils - INFO -   Local case notes (md): 6
+2025-12-31 20:01:23,671 - src.utils - INFO -   Error analysis CSV: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_error_analysis_by_group.csv
+2025-12-31 20:01:23,671 - src.utils - INFO -   Error analysis plot: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\figures\interpretation\phase8_error_analysis_by_group_extra_trees_tuned_calibrated_20251231_200120.png
+2025-12-31 20:01:23,671 - src.utils - INFO -   SHAP stability top10 freq: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_stability_shap_top25_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,672 - src.utils - INFO -   SHAP stability rank corr: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_stability_shap_rankcorr_extra_trees_tuned_calibrated.csv
+2025-12-31 20:01:23,672 - src.utils - INFO -   CatBoost SHAP mean_abs: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_shap_mean_abs_catboost_tuned_calibrated_test500_20251231_200123.csv
+2025-12-31 20:01:23,672 - src.utils - INFO -   Logistic coeffs: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_logistic_coeffs_baseline_logistic.csv
+2025-12-31 20:01:23,672 - src.utils - INFO -   Cross-model top10 comparison: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_cross_model_top10_comparison.csv
+2025-12-31 20:01:23,674 - src.utils - INFO -   What-we-learned summary: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\tables\phase8_what_we_learned_summary.csv
+2025-12-31 20:01:23,674 - src.utils - INFO -   Updated model card: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\model_cards\model_card_extra_trees_tuned_calibrated.md
+2025-12-31 20:01:23,674 - src.utils - INFO -   Interpretation chapter: C:\Users\gkorc\Documents\GitHub\Evaluating-ML-Classifiers-For-Cardiovascular-Disease-Risk-Prediction\reports\model_cards\phase8_interpretation_chapter_extra_trees_tuned_calibrated.md

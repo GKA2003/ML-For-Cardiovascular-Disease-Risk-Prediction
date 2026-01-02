@@ -43,7 +43,7 @@ TRAIN_FILE = "train.csv"
 TEST_FILE = "test.csv"
 TARGET_COLUMN = "TenYearCHD"
 
-RUN_EBM_IN_PHASE6 = False
+RUN_EBM_IN_PHASE6 = True
 
 # Model configurations
 MODEL_CONFIGS = {
@@ -112,6 +112,55 @@ PHASE6_MODELS = [
     "catboost",
     "ebm",
 ]
+
+#Phase 8 interpretation
+PHASE8_FINAL_MODEL_SET = [
+    "extra_trees_tuned_calibrated",
+    "extra_trees_tuned",
+    "catboost_tuned_calibrated",
+    "baseline_logistic"
+]
+PHASE8_PRIMARY_MODEL = "extra_trees_tuned_calibrated"
+
+#SHAP defaults
+PHASE8_SHAP_BACKGROUND_SIZE = 300
+PHASE8_SHAP_TOP_N = 20
+
+PHASE8_PERM_N_REPEATS = 10
+PHASE8_PERM_TOP_N = 20
+
+PHASE8_DEPENDENCE_TOP_K = 8 #top 6-8 features
+PHASE8_MAX_INTERACTION_PLOTS = 2
+
+#Optional PDP/ICE
+PHASE8_PDP_ICE_ENABLED = False
+PHASE8_PDP_ICE_TOP_K = 3
+
+#Calibration and risk stratification
+PHASE8_CALIBRATION_BINS = 10 #reliability risk bins (uniform)
+PHASE8_RISK_DECILES = 10 #deciles of predicted risk (quantiles)
+
+#Local case studies
+PHASE8_LOCAL_HIGH = 2
+PHASE8_LOCAL_LOW = 2
+PHASE8_LOCAL_BORDERLINE = 2
+PHASE8_LOCAL_BORDERLINE_FALLBACK = 0.10 #If no chosen threshold is available
+PHASE8_LOCAL_TOP_CONTRIB = 5
+
+#Error analysis/cross model agreement
+PHASE8_SUBGROUP_MIN = 25
+PHASE8_BOOTSTRAP = 25
+PHASE8_STABILITY_TOP_K = 25
+
+#Cross model SHAP
+PHASE8_CATBOOST_EXPLAIN = 500
+PHASE8_CROSSMODEL_TOP_K = 10
+
+#Guardrails
+PHASE7_EXPECTED_TEST_SIZE = 678
+PHASE8_ALL_ZERO_ALLOWLIST = []
+
+PHASE8_SUMMARY_TOP_N = 10
 
 # NOTE: These keys assume the model is in a Pipeline step named "model"
 ADVANCED_MODEL_PARAM_SPACES = {
@@ -227,7 +276,7 @@ AGE_LABELS = ["<40", "40-50", "50-60", "60+"]
 # Visualisation settings
 FIGURE_SIZE = (10, 6)
 STYLE = "seaborn-v0_8-darkgrid"
-COLOUR_PALETTE = "husl"
+COLOUR_PALETTE = "Set1"
 DPI = 300
 
 # Model saving format

@@ -40,6 +40,7 @@ class FeatureEngineer:
         self.scalers = {}
         self.encoders = {}
         self.categorical_mappings = {}  # Store mappings for consistency
+        self.categorical_features_to_encode = list(categorical_features)
         
     def fit_transform(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> pd.DataFrame:
         """
@@ -272,8 +273,8 @@ class FeatureEngineer:
                 
                 # Update feature lists
                 if 'cigsPerDay' in self.categorical_features:
-                    self.categorical_features.remove('cigsPerDay')
-                    self.categorical_features.append('smoking_intensity')
+                    self.categorical_features_to_encode.remove('cigsPerDay')
+                    self.categorical_features_to_encode.append('smoking_intensity')
         
         return X
     
@@ -282,7 +283,7 @@ class FeatureEngineer:
         module_logger.info("Encoding categorical features...")
         
         # Get all categorical columns that exist in the dataframe
-        categorical_cols_to_encode = [col for col in self.categorical_features if col in X.columns]
+        categorical_cols_to_encode = [col for col in self.categorical_features_to_encode if col in X.columns]
         
         # Handle each categorical feature
         for col in categorical_cols_to_encode:
@@ -351,7 +352,7 @@ class FeatureEngineer:
         
         # Update lists
         self.numerical_features = [col for col in numeric_columns if col not in categorical_columns]
-        self.categorical_features = categorical_columns
+        self.final_categorical_features = categorical_columns
         
         module_logger.info(f"Updated feature lists after engineering:")
         module_logger.info(f"  Numerical: {len(self.numerical_features)} features")
@@ -368,7 +369,7 @@ class FeatureEngineer:
         
         categorical_indices = []
         for i, col in enumerate(self.feature_names):
-            if col in self.categorical_features:
+            if col in self.final_categorical_features:
                 categorical_indices.append(i)
         
         return categorical_indices

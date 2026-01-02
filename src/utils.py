@@ -10,6 +10,9 @@ import joblib
 import logging
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+
 from typing import Dict, List, Tuple, Any, Optional, Union
 from datetime import datetime
 import matplotlib.pyplot as plt

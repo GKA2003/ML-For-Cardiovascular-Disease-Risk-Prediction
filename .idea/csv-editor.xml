@@ -3,7 +3,21 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="\data\processed\test_engineered.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\data\processed\test_processed_phase1.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\data\processed\train_engineered.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -32,6 +46,27 @@
           </value>
         </entry>
         <entry key="\reports\tables\phase7_model_comparison_20251229_132517.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\reports\tables\phase8_shap_mean_abs_catboost_tuned_calibrated_test500_20251231_200123.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\reports\tables\phase8_shap_mean_abs_extra_trees_tuned_calibrated_20251231_200011.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\reports\tables\phase8_what_we_learned_summary.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
